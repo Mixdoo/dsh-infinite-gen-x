@@ -12,6 +12,8 @@ const PROMPT_PATH = join(ROOT, "prompts", "infinite-gen-x.md");
 const INDEX_PATH = join(ROOT, "index.js");
 const SCORER_PATH = join(ROOT, "scripts", "lib", "scorer.mjs");
 const BANK_PATH = join(ROOT, "tests", "prompt-bank.jsonl");
+const PKG_PATH = join(ROOT, "package.json");
+const pkg = existsSync(PKG_PATH) ? JSON.parse(readFileSync(PKG_PATH, "utf8")) : {};
 
 const failures = [];
 const passes = [];
@@ -144,6 +146,37 @@ mustContain(ps1, "无限X代 v0.7.1", "install.ps1: 状态条版本提示");
 mustContain(sh, "DSH_PROFILE", "install.sh: DSH_PROFILE 探测");
 mustContain(sh, "无限X代 v0.7.1", "install.sh: 状态条版本提示");
 mustContain(readFileSync(join(ROOT, "README.md"), "utf8"), "dsh-infinite-gen-x", "README: 插件 id");
+
+// ---- 6b. README 安装链接必须指向本插件自己的仓库（D-014）----
+// 背景：本仓库 fork 自上游并改名，README 里的 dsh:// 一键安装链接曾整批残留上游仓库名
+// （Minglink/dsh-infinite-gen-x，实测 404）与旧代名（无限四代），导致一键安装必然失败。
+// 断言口径：链接里的 repo 必须等于 package.json 的 dsh.repo；downloadUrl 必须同源；
+// name 必须是当前显示名。模板字符串行（参数运行时拼装）无字面值，跳过。
+const readme = readFileSync(join(ROOT, "README.md"), "utf8");
+const expectedRepo = pkg.dsh?.repo;
+check(typeof expectedRepo === "string" && expectedRepo.length > 0, "package.json 声明 dsh.repo");
+check(pkg.repository?.url?.includes(expectedRepo ?? "\u0000"), "repository.url 与 dsh.repo 同源");
+let linkCount = 0;
+for (const line of readme.split("\n")) {
+  const at = line.indexOf("dsh://plugin/install?");
+  if (at < 0) continue;
+  const raw = line.slice(at + "dsh://plugin/install?".length);
+  if (raw.includes("${")) continue; // 模板字符串：无字面参数
+  const qs = raw.split(/["'`<>\s]/)[0];
+  const params = new URLSearchParams(qs);
+  linkCount += 1;
+  const repo = params.get("repo");
+  check(repo === expectedRepo, `README 安装链接 repo = dsh.repo`, `实际 ${repo}，期望 ${expectedRepo}`);
+  check(params.get("name") === "无限X代", "README 安装链接 name = 无限X代", `实际 ${params.get("name")}`);
+  check(params.get("id") === "dsh-infinite-gen-x", "README 安装链接 id 正确", `实际 ${params.get("id")}`);
+  check(
+    (params.get("downloadUrl") ?? "").startsWith(`https://github.com/${expectedRepo}/`),
+    "README 安装链接 downloadUrl 同源",
+    `实际 ${params.get("downloadUrl")}`,
+  );
+}
+check(linkCount > 0, "README 含字面 dsh:// 安装链接", `解析到 ${linkCount} 条`);
+mustAbsent(readme, "Minglink", "README 无上游仓库名残留");
 
 // ---- 7. 汇总 ----
 const json = process.argv.includes("--json");

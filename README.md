@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <a href="dsh://plugin/install?id=dsh-infinite-gen-x&name=%E6%97%A0%E9%99%90%E5%9B%9B%E4%BB%A3&version=0.7.1&repo=Minglink%2Fdsh-infinite-gen-x&permissions=%E7%B3%BB%E7%BB%9F%E6%8F%90%E7%A4%BA%E8%AF%8D%E6%B3%A8%E5%85%A5%2C%E5%AE%A2%E6%88%B7%E7%AB%AF%E7%8A%B6%E6%80%81%E6%9D%A1&downloadUrl=https%3A%2F%2Fgithub.com%2FMinglink%2Fdsh-infinite-gen-x%2Farchive%2Frefs%2Fheads%2Fmaster.zip">
+  <a href="dsh://plugin/install?id=dsh-infinite-gen-x&name=%E6%97%A0%E9%99%90X%E4%BB%A3&version=0.7.1&repo=a137460387%2Fdsh-infinite-gen-x&permissions=%E7%B3%BB%E7%BB%9F%E6%8F%90%E7%A4%BA%E8%AF%8D%E6%B3%A8%E5%85%A5%2C%E5%AE%A2%E6%88%B7%E7%AB%AF%E7%8A%B6%E6%80%81%E6%9D%A1&downloadUrl=https%3A%2F%2Fgithub.com%2Fa137460387%2Fdsh-infinite-gen-x%2Farchive%2Frefs%2Fheads%2Fmaster.zip">
     <img src="https://img.shields.io/badge/DeepSeek%20Harness-🚀%20唤起桌面客户端一键安装无限X代-10B981?style=for-the-badge&logo=deepseek&logoColor=white" alt="唤起桌面客户端一键安装" />
   </a>
 </p>
@@ -185,7 +185,7 @@ node scripts/verify_compat.mjs      # 或 npm run verify:compat
 > 🌐 **插件生态市场**：[DeepSeek Harness Hub - DeepSeek 官方与开源生态市场 | 插件发现与一键安装](https://deepseek.stream/)
 
 <p align="center">
-  <a href="dsh://plugin/install?id=dsh-infinite-gen-x&name=%E6%97%A0%E9%99%90%E5%9B%9B%E4%BB%A3&version=0.7.1&repo=Minglink%2Fdsh-infinite-gen-x&permissions=%E7%B3%BB%E7%BB%9F%E6%8F%90%E7%A4%BA%E8%AF%8D%E6%B3%A8%E5%85%A5%2C%E5%AE%A2%E6%88%B7%E7%AB%AF%E7%8A%B6%E6%80%81%E6%9D%A1&downloadUrl=https%3A%2F%2Fgithub.com%2FMinglink%2Fdsh-infinite-gen-x%2Farchive%2Frefs%2Fheads%2Fmaster.zip">
+  <a href="dsh://plugin/install?id=dsh-infinite-gen-x&name=%E6%97%A0%E9%99%90X%E4%BB%A3&version=0.7.1&repo=a137460387%2Fdsh-infinite-gen-x&permissions=%E7%B3%BB%E7%BB%9F%E6%8F%90%E7%A4%BA%E8%AF%8D%E6%B3%A8%E5%85%A5%2C%E5%AE%A2%E6%88%B7%E7%AB%AF%E7%8A%B6%E6%80%81%E6%9D%A1&downloadUrl=https%3A%2F%2Fgithub.com%2Fa137460387%2Fdsh-infinite-gen-x%2Farchive%2Frefs%2Fheads%2Fmaster.zip">
     <img src="https://img.shields.io/badge/DeepSeek%20Harness-🚀%20唤起桌面客户端一键安装无限X代-10B981?style=for-the-badge&logo=deepseek&logoColor=white" alt="唤起客户端一键安装" />
   </a>
 </p>
@@ -193,7 +193,7 @@ node scripts/verify_compat.mjs      # 或 npm run verify:compat
 🔗 **原生协议链接：**
 
 ```
-dsh://plugin/install?id=dsh-infinite-gen-x&name=%E6%97%A0%E9%99%90%E5%9B%9B%E4%BB%A3&version=0.7.1&repo=Minglink%2Fdsh-infinite-gen-x&permissions=%E7%B3%BB%E7%BB%9F%E6%8F%90%E7%A4%BA%E8%AF%8D%E6%B3%A8%E5%85%A5%2C%E5%AE%A2%E6%88%B7%E7%AB%AF%E7%8A%B6%E6%80%81%E6%9D%A1&downloadUrl=https%3A%2F%2Fgithub.com%2FMinglink%2Fdsh-infinite-gen-x%2Farchive%2Frefs%2Fheads%2Fmaster.zip
+dsh://plugin/install?id=dsh-infinite-gen-x&name=%E6%97%A0%E9%99%90X%E4%BB%A3&version=0.7.1&repo=a137460387%2Fdsh-infinite-gen-x&permissions=%E7%B3%BB%E7%BB%9F%E6%8F%90%E7%A4%BA%E8%AF%8D%E6%B3%A8%E5%85%A5%2C%E5%AE%A2%E6%88%B7%E7%AB%AF%E7%8A%B6%E6%80%81%E6%9D%A1&downloadUrl=https%3A%2F%2Fgithub.com%2Fa137460387%2Fdsh-infinite-gen-x%2Farchive%2Frefs%2Fheads%2Fmaster.zip
 ```
 
 **网页端（前端）触发代码示例：**
@@ -202,14 +202,14 @@ dsh://plugin/install?id=dsh-infinite-gen-x&name=%E6%97%A0%E9%99%90%E5%9B%9B%E4%B
 /**
  * 唤起 DeepSeek Harness 桌面客户端一键安装无限X代插件
  */
-export function installInfiniteGen4ToDesktop() {
+export function installInfiniteGenXToDesktop() {
   const params = new URLSearchParams({
     id: 'dsh-infinite-gen-x',
     name: '无限X代',
     version: '0.7.1',
-    repo: 'Minglink/dsh-infinite-gen-x',
+    repo: 'a137460387/dsh-infinite-gen-x',
     permissions: '系统提示词注入, 客户端状态条',
-    downloadUrl: 'https://github.com/Minglink/dsh-infinite-gen-x/archive/refs/heads/master.zip',
+    downloadUrl: 'https://github.com/a137460387/dsh-infinite-gen-x/archive/refs/heads/master.zip',
   });
 
   const deepLink = `dsh://plugin/install?${params.toString()}`;
@@ -226,7 +226,7 @@ export function installInfiniteGen4ToDesktop() {
 **HTML 静态链接方式：**
 
 ```html
-<a href="dsh://plugin/install?id=dsh-infinite-gen-x&name=%E6%97%A0%E9%99%90%E5%9B%9B%E4%BB%A3&version=0.7.1&repo=Minglink%2Fdsh-infinite-gen-x&permissions=%E7%B3%BB%E7%BB%9F%E6%8F%90%E7%A4%BA%E8%AF%8D%E6%B3%A8%E5%85%A5%2C%E5%AE%A2%E6%88%B7%E7%AB%AF%E7%8A%B6%E6%80%81%E6%9D%A1&downloadUrl=https%3A%2F%2Fgithub.com%2FMinglink%2Fdsh-infinite-gen-x%2Farchive%2Frefs%2Fheads%2Fmaster.zip" class="btn-install">
+<a href="dsh://plugin/install?id=dsh-infinite-gen-x&name=%E6%97%A0%E9%99%90X%E4%BB%A3&version=0.7.1&repo=a137460387%2Fdsh-infinite-gen-x&permissions=%E7%B3%BB%E7%BB%9F%E6%8F%90%E7%A4%BA%E8%AF%8D%E6%B3%A8%E5%85%A5%2C%E5%AE%A2%E6%88%B7%E7%AB%AF%E7%8A%B6%E6%80%81%E6%9D%A1&downloadUrl=https%3A%2F%2Fgithub.com%2Fa137460387%2Fdsh-infinite-gen-x%2Farchive%2Frefs%2Fheads%2Fmaster.zip" class="btn-install">
   🚀 唤起客户端一键安装
 </a>
 ```
@@ -238,9 +238,9 @@ export function installInfiniteGen4ToDesktop() {
 | id | `dsh-infinite-gen-x` | 插件唯一标识符 |
 | name | `无限X代`（URL 编码） | 插件展示名称 |
 | version | `0.7.1` | 语义化版本号 |
-| repo | `Minglink/dsh-infinite-gen-x` | 官方 GitHub 仓库 |
+| repo | `a137460387/dsh-infinite-gen-x` | 本插件 GitHub 仓库 |
 | permissions | `系统提示词注入, 客户端状态条`（URL 编码） | 申请权限 |
-| downloadUrl | `https://github.com/Minglink/dsh-infinite-gen-x/archive/refs/heads/master.zip` | 离线 zip 下载直链 |
+| downloadUrl | `https://github.com/a137460387/dsh-infinite-gen-x/archive/refs/heads/master.zip` | 离线 zip 下载直链 |
 
 ---
 

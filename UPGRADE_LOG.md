@@ -762,6 +762,61 @@ D-007~D-010 四轮工程化改动（评分器唯一实现 / Config 化 / 兼容�
 
 ---
 
+## D-014 README 一键安装链接指向不存在的仓库 —— 已修复
+
+**日期**：2026-09-28
+**状态**：✅ 已实现
+**Commit**：（本条目随实现同批提交）
+
+### 发现经过
+用户问"另一台电脑要装这个插件该发什么提示词"。为让指示准确，我核对了本仓库 README 里的
+`dsh://` 一键安装链接 —— 结果发现**按钮指向的仓库根本不存在**。
+
+### 问题
+本仓库 fork 自上游并改名，但 README 的安装链接整批残留上游仓库名与旧代名：
+
+| 位置 | 残留内容 |
+|---|---|
+| `README.md:8` / `:188` / `:196` / `:229` | 4 处 `dsh://` 链接：`repo=Minglink/dsh-infinite-gen-x`、`name=无限四代`、`downloadUrl` 同 |
+| `README.md:210` / `:212` | 网页端示例代码里的 `repo` 与 `downloadUrl` |
+| `README.md:241` / `:243` | 协议参数表里的 `repo` 与 `downloadUrl` |
+| `README.md:205` | 示例函数名 `installInfiniteGen4ToDesktop`（四代字样） |
+
+**实测核实**（GitHub API）：`Minglink/dsh-infinite-gen-x` → **HTTP 404 不存在**；
+`a137460387/dsh-infinite-gen-x` → 存在（public，default=master）。
+即**任何用户点 README 的一键安装按钮都会失败**。
+
+### 修复
+- 4 处 `dsh://` 链接 + 示例代码 + 参数表：`repo` → `a137460387/dsh-infinite-gen-x`，
+  `downloadUrl` → `https://github.com/a137460387/dsh-infinite-gen-x/archive/refs/heads/master.zip`。
+- `name` 的 URL 编码 `%E6%97%A0%E9%99%90%E5%9B%9B%E4%BB%A3`（无限四代）→
+  `%E6%97%A0%E9%99%90X%E4%BB%A3`（无限X代）。
+- 示例函数名 `installInfiniteGen4ToDesktop` → `installInfiniteGenXToDesktop`。
+- 参数表里 `repo` 的说明「官方 GitHub 仓库」→「本插件 GitHub 仓库」（这是 fork 出的自有仓库）。
+
+**踩坑记录**：第一轮替换**漏掉了 `downloadUrl`** —— 它的值**也做过 URL 编码**，
+仓库名以 `%2F` 分隔（`github.com%2FMinglink%2F…`），与 `repo=` 之后的形态不同，
+按 `repo=Minglink%2F…` 前缀匹配自然漏掉。第二轮按 `Minglink%2Fdsh-infinite-gen-x` 全局补上。
+（与 D-012 同类教训：**替换要按"值的实际形态"匹配，不能按"我预期它长什么样"匹配**。）
+
+### 新增回归约束（README 安装链接必须指向本插件自己的仓库）
+`verify_prompt.mjs` 新增 **20 条断言**：链接的 `repo` 必须等于 `package.json` 的 `dsh.repo`、
+`downloadUrl` 必须同源、`name` 必须为当前显示名、`id` 正确，并 `mustAbsent(readme, "Minglink")`；
+另加 `dsh.repo` 与 `repository.url` 同源校验。模板字符串行（参数运行时拼装）无字面值，跳过。
+（该脚本原先不读 `package.json`，本次补上。）
+
+### 验证（三个负例全部命中）
+| 负例 | 结果 |
+|---|---|
+| 一处链接 `repo` 改回 `Minglink` | ❌ ×2（repo 不符 + Minglink 残留）→ 80/2 |
+| `name` 改回旧代名「无限四代」 | ❌ ×1（name 不符）→ 81/1 |
+| `downloadUrl` 指向 `SomeOtherOrg` | ❌ ×1（downloadUrl 不同源）→ 81/1 |
+
+恢复后：`verify_prompt` **82/0**（原 62，新增 20 条）；`verify_prompt_genx` 108/0；
+`node --check` 通过。
+
+---
+
 ## 候选方向（待评估）
 - ~~**(c) 按目标模型分内核**~~ → **D-005 证伪**，gen-x 低调内核跨模型通用，无需求。
 - **(d) armor LLM 辅助判定**：规则 + LLM 混合判定 refusal，突破词表天花板（D-004 的延伸）。
