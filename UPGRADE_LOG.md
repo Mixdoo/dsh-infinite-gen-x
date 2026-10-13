@@ -581,6 +581,10 @@ Tier-1 #4「`dsh.client.inject`」——原计划照 purge 声明 5 个客户端
 但**本环境无法目视验证**（本会话是 desktop profile 未加载 gen-x，且无浏览器控制）。
 请在 `web` profile 刷新页面后确认：输入框上方「无限X代 v0.6.0」状态条仍正常出现与着色。
 
+> ✅ **已确认（2026-09-28，用户截图）**：`web` profile 重启后状态条**正常出现并着色**
+> （绿点 + 文案完整，此时文案已随 D-011 变为 v0.7.0）。移除 `immediately` **未影响**
+> 客户端 bundle 的注册——判定成立，无需回滚。
+
 ### 后续（Tier-1 剩余项）
 - 发布工程（`.github/workflows/release.yml` / `dsh.install` / `bin`）：**用户裁定不做（不发 npm / 不发 Hub）**，本条划掉。
 - 文档工程：双语 README、`docs/` 截图、`release-notes.md`。
@@ -631,12 +635,17 @@ D-007~D-010 四轮工程化改动（评分器唯一实现 / Config 化 / 兼容�
   `index.js pluginVersion = package.json version`。
 - **负例实测**（证明非空断言）：把徽标改成 `v0.8.0` 而不动 `package.json` →
   断言报 `徽标 0.8.0 vs pkg 0.7.0`（98/2）；恢复 → **100/0**。
-- 回归：`verify_prompt_genx` **100/0**、`verify_prompt_genx1` 96/0、`verify_prompt` 62/0、
+- 回归：`verify_prompt_genx` **100/0**、`verify_prompt` 62/0、
   `verify_compat` OK、`scorer_semantics` OK、`node --check` index.js + client.js 通过。
+  （**勘误**：`verify_prompt_genx1.mjs` 只有 3 行 —— `import "./verify_prompt_genx.mjs"` 的兼容别名，
+  它报的也是 100/0；**同一套断言的两个入口，不是两套独立套件**。本条目初稿曾误记为两个独立数字。）
 
 ### 待人工确认（叠加在 D-010 之上）
 `web` profile 重启/刷新后，输入框上方状态条应显示 **「⚫ 无限X代 v0.7.0」**。
 版本一致性已由上述 4 条不变量绑定，以后漏改任一侧都会被断言拦下。
+
+> ✅ **已确认（2026-09-28，用户截图）**：状态条显示 **「无限X代 v0.7.0」**（绿色圆点 + 文案完整），
+> 与 `package.json` 版本一致——D-011 升级生效，D-010 与 D-011 两条待确认项**同时闭合**。
 
 ---
 
