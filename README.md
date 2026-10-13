@@ -56,7 +56,9 @@
 > ### 🧬 v0.6.0 双层内核说明（Dual-Layer Kernel）
 >
 > - 注入槽位：`infinite-gen-x:global-system-prompt`（Order 100）+ `infinite-gen-x:dual-layer-reinforce`（Order 200），
->   由 `index.js` 的 `DUAL_LAYER_INJECTION` 开关控制（改 `false` 即单段注入，行为等价）。
+>   由 `cordis.patch.yml` 的 `config.dualLayerInjection` 控制（改 `false` 即单段注入，行为等价）。
+> - 拒绝闭环纠偏段 `infinite-gen-x:refusal-corrective`（Order 150）由 `config.refusalCorrective` 控制。
+> - 两个开关都在本插件 `cordis.patch.yml` 的 `config` 块里改，无需动源码；改完重启 Harness 生效。
 > - `prompts/` 下三个内核文件（`infinite-gen-3.md` / `infinite-gen-x.md` / `infinite-gen-x.1-flash.md`）
 
 ---

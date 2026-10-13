@@ -410,6 +410,52 @@ gen-x 此前正是"两处各写一遍"，且漂移静默了 3 个实验（D-004 
 
 ---
 
+## D-008 插件配置化（硬编码开关 → Config）—— 已实现
+
+**日期**：2026-09-28
+**状态**：✅ 已实现
+**Commit**：（本条目随实现同批提交）
+
+### 问题
+`index.js` 把两个部署相关开关写死成模块常量：
+`const DUAL_LAYER_INJECTION = true` / `const REFUSAL_CORRECTIVE = true`。
+改开关必须改源码 + 重启。DSH 仓库规范明确要求 —— *"No hardcoded tunables in plugins:
+deployment-varying choices are validated `Config` fields changeable from cordis.yml"* ——
+gen-x 此前违反该规范。
+
+### 实现
+- `DEFAULT_CONFIG` + `resolveConfig(raw)` 显式补默认值（缺省 true/true，与原行为完全一致）。
+- `export const Config` 用 **Standard Schema v1**（`~standard` + `validate`，**零依赖**，无需引入 zod）
+  在激活时校验：已知键必须是布尔，非法即报错（"Misconfiguration fails loud"）；
+  未知键按 DSH 内建 `z.object` 的默认行为**忽略**，避免上游新增信封字段时中断激活。
+- `apply(ctx, config)` 解析一次，段注册按 `options.refusalCorrective` / `options.dualLayerInjection` 门控。
+- `profileTool` → `createProfileTool(options)` 工厂：元数据工具如实披露本次生效的 config 与三个槽位的 `enabled`。
+- `cordis.patch.yml` 补 `config:` 块，把两个开关暴露成可发现、可覆盖的配置项。
+
+### 验证
+- **`Config` 契约 8 项**：缺省 / 显式 true / 显式 false / 部分给键 / 类型错误 / 未知键 / 非对象 /
+  只给一个键 —— 全部符合预期（类型错误 REJECT，未知键忽略并回填默认）。
+- **配置门控 6 项**（mock ctx 统计段注册数）：缺省与全开 → `[100,150,200]`；
+  关双段 → `[100,150]`；关纠偏 → `[100,200]`；两个都关 → `[100]`；非法类型回落缺省 → `[100,150,200]`。
+- 工具披露的 `config` 与 `injection[].enabled` 与实际门控一致。
+- `cordis.patch.yml` 用 DSH 自带 **yaml v2.9.0 正式解析**通过 + 8 项结构校验
+  （补丁格式错误会导致宿主启动失败，必须真解析，不能只目视）。
+- 回归：`verify_prompt_genx` 92/0、`verify_prompt_genx1` 92/0、`verify_prompt` 62/0、`scorer_semantics` OK。
+  两个回归脚本各新增 "Config 化约束" 断言（`mustAbsent("const DUAL_LAYER_INJECTION")` 等），
+  把"不许再硬编码"变成**机器可检查的约束**（沿用 D-007 的教训做法）。
+
+### 效果
+改开关不再需要动源码：编辑本插件 `cordis.patch.yml` 的 `config` 块 → 重启 Harness 生效。
+A/B 对照（双层 vs 单段注入、闭环纠偏开 vs 关）从"改源码+重启"降级为纯配置操作。
+
+### 后续（Tier-1 剩余项）
+- 兼容性元数据：`dshTarget` / `peerDependencies` / `engines`。
+- `dsh.client.inject`：需先确认 `client.js` 是否真的消费那些客户端服务（无消费者就不该声明）。
+- 发布工程（`.github/workflows/release.yml` / `dsh.install` / `bin`）：取决于是否要发 npm。
+- 文档工程：双语 README、`docs/` 截图、`release-notes.md`。
+
+---
+
 ## 候选方向（待评估）
 - ~~**(c) 按目标模型分内核**~~ → **D-005 证伪**，gen-x 低调内核跨模型通用，无需求。
 - **(d) armor LLM 辅助判定**：规则 + LLM 混合判定 refusal，突破词表天花板（D-004 的延伸）。

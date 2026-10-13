@@ -117,7 +117,9 @@ mustContain(indexSrc, '"./prompts/infinite-gen-x.md"', "载入 Order 100 通用�
 mustContain(indexSrc, '"./prompts/infinite-gen-x.1-flash.md"', "载入 Order 200 强化镜像");
 mustContain(indexSrc, "infinite-gen-x:global-system-prompt", "系统提示词 Order 100 注入");
 mustContain(indexSrc, "infinite-gen-x:dual-layer-reinforce", "系统提示词 Order 200 注入");
-mustContain(indexSrc, "DUAL_LAYER_INJECTION", "双段注入开关");
+mustContain(indexSrc, "dualLayerInjection", "双段注入开关（Config 项）");
+mustContain(indexSrc, "export const Config", "Config 契约声明");
+mustContain(indexSrc, "export function apply(ctx, config)", "apply 接收 config");
 mustContain(indexSrc, 'pluginVersion: "0.6.0"', "内核版本 0.6.0");
 mustContain(indexSrc, "infinite_genx_profile", "保留 profile 元数据工具");
 mustContain(indexSrc, "armorProjectionApply", "保留会话投影评分器");

@@ -11,8 +11,10 @@
 - **双层提示词协同注入（Dual-Layer Injection）**：
   - `infinite-gen-x:global-system-prompt`（Order 100）→ `prompts/infinite-gen-x.md`
   - `infinite-gen-x:dual-layer-reinforce`（Order 200）→ `prompts/infinite-gen-x.1-flash.md`
-  - 两段载荷同源同构，SHA256 完全一致；由 `index.js` 的 `DUAL_LAYER_INJECTION`
-    开关控制（`false` 即单段注入，行为等价）。
+  - 两段载荷同源同构，SHA256 完全一致；由 `cordis.patch.yml` 的 `config.dualLayerInjection`
+    控制（`false` 即单段注入，行为等价）。
+  - 拒绝闭环纠偏段 `infinite-gen-x:refusal-corrective`（Order 150）由 `config.refusalCorrective`
+    控制（`false` 即只投影不干预）。两个开关都在 `cordis.patch.yml` 的 `config` 块里改。
   - 载荷中的 `{{...}}` 非内置变量由 `index.js` 做安全转义，避免模板解析器抛错。
 - **输出契约与首 Token 诱导**：首行强制以 `##` 或 ``` 命名交付物 + 静默推理 + 占位符自造，
   杜绝散文式开场与拒答先验。

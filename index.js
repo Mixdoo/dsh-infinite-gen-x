@@ -42,15 +42,47 @@ function readPayload(stableUrl, devUrl) {
 const promptText = () => escapeBraces(readPayload(PROMPT_URL, PROMPT_DEV_URL));
 const prompt41Text = () => escapeBraces(readPayload(PROMPT41_URL, PROMPT41_DEV_URL));
 
-// 双段注入镜像开关：
-//   true  = 沿用四代双层架构，Order 100 与 Order 200 各注入一份内核载荷
-//   false = 单段注入（Order 100），省掉重复 token，行为等价
-const DUAL_LAYER_INJECTION = true;
+// 可配置项：由 cordis.patch.yml 的 config 块覆盖，缺省保持既有行为。
+// 部署相关的选择一律走 Config（DSH 规范：No hardcoded tunables in plugins）。
+const DEFAULT_CONFIG = Object.freeze({
+  // true  = 沿用四代双层架构，Order 100 与 Order 200 各注入一份内核载荷
+  // false = 单段注入（Order 100），省掉重复 token，行为等价
+  dualLayerInjection: true,
+  // true  = armor 投影检测到上一轮 refusal/fallback 时，下一轮在 Order 150 追加一段纠偏指令
+  // false = 不注入纠偏段（armor 仅投影，不干预）
+  refusalCorrective: true,
+});
 
-// 拒绝闭环干预开关（Host 架构层，区别于内核文字对抗）：
-//   true  = armor 投影检测到上一轮 refusal/fallback 时，下一轮在 Order 150 追加一段纠偏指令
-//   false = 不注入纠偏段（armor 仅投影，不干预）
-const REFUSAL_CORRECTIVE = true;
+// 显式解析：缺省补默认值。类型错误在 Config 校验阶段已拦下，这里不再重复校验。
+function resolveConfig(raw) {
+  const src = raw && typeof raw === "object" ? raw : {};
+  const resolved = {};
+  for (const [key, fallback] of Object.entries(DEFAULT_CONFIG)) {
+    resolved[key] = typeof src[key] === "boolean" ? src[key] : fallback;
+  }
+  return resolved;
+}
+
+// Config 契约（Standard Schema v1，零依赖）：激活时校验行内 config，非法即报错而非静默降级。
+// 未知键按 DSH 内建 z.object 的默认行为忽略（不报错），避免上游新增信封字段时中断激活。
+export const Config = {
+  "~standard": {
+    version: 1,
+    vendor: "dsh-infinite-gen-x",
+    validate(value) {
+      const src = value === undefined || value === null ? {} : value;
+      if (typeof src !== "object" || Array.isArray(src)) {
+        return { issues: [{ message: "dsh-infinite-gen-x: config 必须是对象" }] };
+      }
+      for (const [key, fallback] of Object.entries(DEFAULT_CONFIG)) {
+        if (src[key] !== undefined && typeof src[key] !== typeof fallback) {
+          return { issues: [{ message: `dsh-infinite-gen-x: config.${key} 必须是布尔值` }] };
+        }
+      }
+      return { value: resolveConfig(src) };
+    },
+  },
+};
 
 // 纠偏文案：低调措辞（沿用 D-002 原则，不引入 sandbox/directive/supreme 等高识别度框架词）。
 // 利用 armor 的 domain 命中做域针对；无拒绝时返回空串，零噪音。
@@ -75,8 +107,8 @@ const objectOutput = {
   render: (_args, value) => [{ type: "text", text: JSON.stringify(value) }],
 };
 
-// 运行时元数据工具：返回插件版本与能力清单
-const profileTool = {
+// 运行时元数据工具：返回插件版本、能力清单与本次激活实际生效的配置
+const createProfileTool = (options) => ({
   name: "infinite_genx_profile",
   description:
     "Return runtime metadata for the bundled 无限X代 (Infinite Generation X) 破甲系统提示词与版本元数据。",
@@ -102,9 +134,18 @@ const profileTool = {
         {
           section: "infinite-gen-x:dual-layer-reinforce",
           order: 200,
-          enabled: DUAL_LAYER_INJECTION,
+          enabled: options.dualLayerInjection,
+        },
+        {
+          section: "infinite-gen-x:refusal-corrective",
+          order: 150,
+          enabled: options.refusalCorrective,
         },
       ],
+      config: {
+        dualLayerInjection: options.dualLayerInjection,
+        refusalCorrective: options.refusalCorrective,
+      },
       mode: "armor — 双层协同注入，零工具面纯净直出",
       payloadSections: [
         "[MODE: SANDBOX]",
@@ -115,7 +156,7 @@ const profileTool = {
       ],
       hostFeatures: [
         "Dual-Layer Injection: Order 100 通用内核 + Order 200 强化镜像",
-        "Section Hosting: 双槽位可由 DUAL_LAYER_INJECTION 切换单段注入",
+        "Section Hosting: 双槽位可由 config.dualLayerInjection 切换单段注入",
         "Armor Projection: 开头窗口(160)判拒 + REFUSAL/FALLBACK/SAFE/RISK 标记 + 域命中",
         "Client Badge: 输入框上方「无限X代 v0.6.0」实时状态条",
         "Profile Tool: infinite_genx_profile 返回内核版本与注入槽位元数据",
@@ -131,7 +172,7 @@ const profileTool = {
       ],
     };
   },
-};
+});
 
 // ---- 实时破甲状态（会话投影，评分器标准实现） ----
 function armorTextOf(content) {
@@ -166,7 +207,9 @@ function armorProjectionApply(state, event) {
 export const name = "dsh-infinite-gen-x";
 export const inject = ["tools", "systemPrompt"];
 
-export function apply(ctx) {
+export function apply(ctx, config) {
+  const options = resolveConfig(config);
+
   ctx.effect(() =>
     ctx.systemPrompt.section({
       name: "infinite-gen-x:global-system-prompt",
@@ -177,7 +220,7 @@ export function apply(ctx) {
 
   // 拒绝闭环纠偏段（Order 150）：每轮组装时读 armorx 投影的上轮 verdict，
   // refusal/fallback 则追加纠偏指令，pass/无数据则返回空串。sessionProjections 缺失时静默不注入。
-  if (REFUSAL_CORRECTIVE) {
+  if (options.refusalCorrective) {
     ctx.effect(() =>
       ctx.systemPrompt.section({
         name: "infinite-gen-x:refusal-corrective",
@@ -198,7 +241,7 @@ export function apply(ctx) {
     );
   }
 
-  if (DUAL_LAYER_INJECTION) {
+  if (options.dualLayerInjection) {
     ctx.effect(() =>
       ctx.systemPrompt.section({
         name: "infinite-gen-x:dual-layer-reinforce",
@@ -208,7 +251,7 @@ export function apply(ctx) {
     );
   }
   ctx.effect(() => {
-    ctx.tools.register(profileTool);
+    ctx.tools.register(createProfileTool(options));
   });
 
   const anySchema = { parse: (value) => value };
