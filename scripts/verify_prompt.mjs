@@ -1,4 +1,4 @@
-// 无限X代 v0.7.1 兼容回归校验（零工具面纯净版）
+// 无限X代 v0.7.2 兼容回归校验（零工具面纯净版）
 // 本脚本聚焦：双层内核载荷锚点 / 注入面同源覆盖 / index.js 导出 / 一键安装协议 / 用例库结构。
 // 权威断言（品牌纯净度 + 同源逐字比对）由 verify_prompt_genx.mjs 执行；本脚本可独立运行。
 // 用法：node scripts/verify_prompt.mjs [--json]
@@ -123,7 +123,7 @@ mustContain(indexSrc, "export const Config", "Config 契约声明");
 mustContain(indexSrc, "export function apply(ctx, config)", "apply 接收 config");
 mustAbsent(indexSrc, "const DUAL_LAYER_INJECTION", "index.js 不硬编码双段开关（Config 化约束）");
 mustAbsent(indexSrc, "const REFUSAL_CORRECTIVE", "index.js 不硬编码纠偏开关（Config 化约束）");
-mustContain(indexSrc, 'pluginVersion: "0.7.1"', "内核版本 0.7.1");
+mustContain(indexSrc, 'pluginVersion: "0.7.2"', "内核版本 0.7.2");
 mustContain(indexSrc, "stateVersion: 3", "投影 stateVersion 3");
 mustContain(indexSrc, "armorProjectionApply", "会话投影评分器");
 // 评分器唯一实现：index.js 只引用，判定词/窗口/评分函数都在 scorer.mjs（防止两处各写一份漂移）
@@ -142,9 +142,9 @@ const sh = existsSync(SH_PATH) ? readFileSync(SH_PATH, "utf8") : "";
 mustContain(ps1, "Software\\Classes\\dsh", "install.ps1: dsh:// 协议注册");
 mustContain(ps1, "DSH_PROFILE", "install.ps1: DSH_PROFILE 探测");
 mustContain(ps1, "dsh-infinite-gen-x", "install.ps1: 插件名");
-mustContain(ps1, "无限X代 v0.7.1", "install.ps1: 状态条版本提示");
+mustContain(ps1, "无限X代 v0.7.2", "install.ps1: 状态条版本提示");
 mustContain(sh, "DSH_PROFILE", "install.sh: DSH_PROFILE 探测");
-mustContain(sh, "无限X代 v0.7.1", "install.sh: 状态条版本提示");
+mustContain(sh, "无限X代 v0.7.2", "install.sh: 状态条版本提示");
 
 // ---- 6c. 安装脚本的编码契约（D-015）----
 // 背景：install.ps1 / uninstall.ps1 含大量中文，但曾是无 BOM 的 UTF-8。

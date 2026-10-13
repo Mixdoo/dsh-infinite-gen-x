@@ -976,6 +976,61 @@ if ($found.Count -gt 0) { return $found }     # ← 返回全部，而非第一�
 
 ---
 
+## D-017 版本号升级 0.7.1 → 0.7.2（补丁位）
+
+**日期**：2026-09-28
+**状态**：✅ 已实现
+**Commit**：（本条目随实现同批提交）
+
+### 起因
+用户要求 `v0.7.1` → `v0.7.2`。
+（用户先发"0.7.1 改 0.7.12"、随即更正为"0.7.1 改 0.7.2"，按后者执行；0.7.12 在 semver 上
+高于 0.7.2，若确为前者可一条命令再改。）
+
+### 改动范围（52 处，11 个文件）
+| 文件 | 处数 | 内容 |
+|---|---|---|
+| `README.md` | 16 | 标题、版本块、对比表列头、目录树、YAML 示例、验证步骤、dsh:// 安装 URL |
+| `scripts/verify_prompt_genx.mjs` | 9 | 头部注释 + 断言 |
+| `index.js` | 6 | 注释、`pluginVersion`、`kernelVersion`、`baseline`、`lineage`、能力清单 |
+| `scripts/verify_prompt.mjs` | 5 | 头部注释 + 断言 |
+| `package.json` | 3 | `version`、`dsh.version`、`description` |
+| `client.js` | 2 | 徽标 `text` 与 `title` |
+| **`install.ps1`** | **2** | **安装横幅 + 验证提示（含 BOM，本轮被改动）** |
+| `install.sh` | 2 | 安装横幅 + 验证提示 |
+| `run_bank_live.mjs` / `verify_prompt_genx1.mjs` | 各 1 | 头部注释 |
+| `tests/测试数据获取方式-v4pro.md` | 1 | 状态条验证步骤 |
+
+### 两处刻意不改（同 D-011/D-013 原则）
+1. `UPGRADE_LOG.md` 不重写 —— 历史档案里的 `0.7.1` 是当时事实。
+2. `HARNESS_PLUGIN.md` 版本历史表**加行**：v0.7.1 行改非粗体，新增 **v0.7.2** 行
+   （概括 D-014~D-016 的跨机安装修复）。
+
+### 本次刻意规避的两个已知坑
+1. **BOM 保留**：`install.ps1` 含中文且必须有 UTF-8 BOM（D-015）。D-013 时替换脚本用
+   `readFileSync(p,"utf8")` + `writeFileSync(p,str)`，而 D-016 实测 `edit` 工具会**静默剥掉 BOM**。
+   本次替换脚本改为**按 Buffer 读取、显式检测并在写回时重新拼接原 BOM**，
+   并在脚本内 + 脚本外**双重独立复核**（`install.ps1` / `uninstall.ps1` 前 3 字节均为 `ef bb bf`）。
+2. **PS 5.1 解析复验**：因 `install.ps1` 本轮被改动，替换后**实际调用 Windows PowerShell 5.1
+   做 AST 解析**，返回 `OK`（这正是 D-015 引入的检查点）。
+
+### 验证
+- **一致性（八处）**：`package.json.version` / `dsh.version` / `pluginVersion` / `kernelVersion` /
+  `baseline` 内嵌版本 / `client.js` 徽标（`text`+`title`）/ `README` 标题 / `HARNESS_PLUGIN` 版本表末行
+  —— 全部 `0.7.2`。
+- 排除文件之外**无 `0.7.1` 残留**；替换前已确认仓库内不存在 `0.7.1x` 形态（不会误伤 0.7.12 类版本号）。
+- BOM：`install.ps1` / `uninstall.ps1` 均保留；`install.sh` / `uninstall.sh` 仍无 BOM（shebang 要求）。
+- PS 5.1 解析 `install.ps1`：**OK**。
+- 回归：`verify_prompt_genx` **108/0**、`verify_prompt` **88/0**、`verify_compat` COMPAT OK、
+  `scorer_semantics` OK、`node --check` 通过。
+
+### 生效说明
+- **本地两台 profile 均无需重装**：都是 `link:` + Junction 直读仓库，改动重启即生效
+  （D-012/D-013 已在运行实例中实测生效）。
+- **另一台机器需要重新同步**才能拿到 0.7.2 与 D-014~D-016 的修复（那边是复制快照形态）。
+
+---
+
 ## 候选方向（待评估）
 - ~~**(c) 按目标模型分内核**~~ → **D-005 证伪**，gen-x 低调内核跨模型通用，无需求。
 - **(d) armor LLM 辅助判定**：规则 + LLM 混合判定 refusal，突破词表天花板（D-004 的延伸）。
