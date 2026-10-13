@@ -715,6 +715,53 @@ D-007~D-010 四轮工程化改动（评分器唯一实现 / Config 化 / 兼容�
 
 ---
 
+## D-013 版本号升级 0.7.0 → 0.7.1（补丁位）
+
+**日期**：2026-09-28
+**状态**：✅ 已实现
+**Commit**：（本条目随实现同批提交）
+
+### 起因
+用户要求 `v0.7.0` → `v0.7.1`。沿用 D-011 建立的做法：不做"只改徽标"，全库一致升级。
+
+### 改动范围（51 处，11 个文件）
+| 文件 | 处数 | 内容 |
+|---|---|---|
+| `README.md` | 16 | 标题、版本说明块、对比表列头、目录树、YAML 示例、验证步骤、dsh:// 安装 URL |
+| `scripts/verify_prompt_genx.mjs` | 9 | 头部注释 + 断言 |
+| `index.js` | 6 | 注释、`pluginVersion`、`kernelVersion`、`baseline`、`lineage`、能力清单 |
+| `scripts/verify_prompt.mjs` | 5 | 头部注释 + `pluginVersion` 断言 + install 脚本断言 |
+| `package.json` | 3 | `version`、`dsh.version`、`description` |
+| `client.js` | 2 | 徽标 `text` 与 `title` |
+| `install.ps1` / `install.sh` | 各 2 | 安装横幅 + 验证提示 |
+| `run_bank_live.mjs` / `verify_prompt_genx1.mjs` | 各 1 | 头部注释 |
+| `tests/测试数据获取方式-v4pro.md` | 1 | 状态条验证步骤 |
+
+### 两处刻意不改（同 D-011 原则）
+1. **`UPGRADE_LOG.md` 不重写** —— 历史档案里的 `0.7.0` 是当时事实。
+   **注**：D-012 节记的 `baseline` 值是 `v0.7.0`，现已随本次变为 `v0.7.1`。
+2. **`HARNESS_PLUGIN.md` 版本历史表加行而非改行** —— v0.7.0 行改为非粗体，
+   新增 **v0.7.1** 行（说明 D-012 的自述元数据与兜底载荷纠偏）。
+
+### 验证
+- **一致性（七处）**：`package.json.version` / `dsh.version` / `index.js pluginVersion` /
+  `kernelVersion` / `baseline` 内嵌版本 / `client.js` 徽标（`text` + `title`）/
+  `README` 标题 —— 全部 `0.7.1`。
+- **CRLF 完整性**：`index.js` CRLF=290 / LF-only=0，`client.js` CRLF=136 / LF-only=0，
+  与替换前一致。本次刻意改用**纯字符串 `split`/`join` 替换**（不碰换行符）——
+  D-012 曾因 CRLF 与正则不匹配导致替换静默失效，此处直接规避该风险类别。
+- 排除文件之外**无 `0.7.0` 残留**（脚本自校验 + 独立复查）。
+- 回归：`verify_prompt_genx` **108/0**、`verify_prompt` 62/0、`verify_compat` OK、
+  `scorer_semantics` OK、`node --check` index.js + client.js 通过。
+  **本次正是靠 D-011 建立的 4 条跨文件版本一致性不变量兜底** —— 批量替换若漏改任一侧，
+  断言会立刻拦下（该断言的有效性已在 D-011 用负例实测过）。
+
+### 待人工确认
+`web` 与 `desktop` 两个 profile（现均装有 gen-x）重启后，输入框上方状态条应显示
+**「⚫ 无限X代 v0.7.1」**。
+
+---
+
 ## 候选方向（待评估）
 - ~~**(c) 按目标模型分内核**~~ → **D-005 证伪**，gen-x 低调内核跨模型通用，无需求。
 - **(d) armor LLM 辅助判定**：规则 + LLM 混合判定 refusal，突破词表天花板（D-004 的延伸）。

@@ -1,4 +1,4 @@
-# DeepSeek Harness Plugin — 无限X代 / dsh-infinite-gen-x (v0.7.0)
+# DeepSeek Harness Plugin — 无限X代 / dsh-infinite-gen-x (v0.7.1)
 
 网络安全红队（Red-Teaming）测试插件，项目名：**无限X代（Infinite Generation X）**。
 专为 **DeepSeek-V4.1 / V4-Pro / V4-Flash 及 MoE 架构** 重构，采用
@@ -22,7 +22,7 @@
   不存在可拒绝的请求类别。
 - **评分器与会话投影**：开头窗口（160）判拒 + REFUSAL / FALLBACK / SAFE / RISK 四类标记
   + 域命中检测，驱动客户端状态条展示。该投影是**评分器**，不参与系统提示词注入。
-- **客户端实时状态条**：在输入框上方挂载 `⚫ 无限X代 v0.7.0` 动态状态条（含命中域/载荷数显示）。
+- **客户端实时状态条**：在输入框上方挂载 `⚫ 无限X代 v0.7.1` 动态状态条（含命中域/载荷数显示）。
 - **profile 元数据工具**：`infinite_genx_profile` 返回内核版本、注入槽位清单与能力标记。
 
 ## 注入面文件
@@ -65,7 +65,8 @@
 |---|---|
 | v0.3.0 | 双层注入首版（Order 100 通用内核 + Order 200 战场实测层） |
 | v0.6.0 | 双层注入收敛为同源同构内核；注入槽位统一为 `infinite-gen-x:*`；内核载荷与强化镜像逐字一致 |
-| **v0.7.0** | 工程化收口（D-007~D-010）：评分器改唯一实现（运行时与评测台共用）、两个开关 Config 化、DSH 兼容性元数据与离线门禁 `verify_compat.mjs`、客户端清单纠偏（移除 `immediately`） |
+| v0.7.0 | 工程化收口（D-007~D-010）：评分器改唯一实现（运行时与评测台共用）、两个开关 Config 化、DSH 兼容性元数据与离线门禁 `verify_compat.mjs`、客户端清单纠偏（移除 `immediately`） |
+| **v0.7.1** | 自述元数据与兜底载荷纠偏（D-012）：清除 `index.js` 残留的 4 处旧框架词（兜底载荷改用低调措辞、`infinite_genx_profile` 元数据与内核一致），并新增"元数据不得复现已移除框架词"回归约束 |
 
 ## Local verification
 
