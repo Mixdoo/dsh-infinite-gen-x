@@ -897,6 +897,66 @@ D-007~D-010 四轮工程化改动（评分器唯一实现 / Config 化 / 兼容�
 
 ---
 
+## D-016 `install.ps1` 会静默写入多个 profile；BOM 被编辑工具剥掉 —— 均已修复
+
+**日期**：2026-09-28
+**状态**：✅ 已实现
+**Commit**：（本条目随实现同批提交）
+
+D-015 之后，为给"另一台机器重新同步"写指示，我复核了 `install.ps1` 的 profile 判定逻辑，
+过程中又发现两处问题。
+
+### 问题一：`install.ps1` 会**静默同时写入多个 profile**
+
+函数注释写的是"按优先级探测 `web`/`default`"，但实现是**收集所有命中项并全部返回**：
+
+```powershell
+$found = @()
+foreach ($name in @('web', 'default', 'desktop')) {
+    if (Test-Path (Join-Path $candidate 'package.json')) { $found += $candidate }
+}
+if ($found.Count -gt 0) { return $found }     # ← 返回全部，而非第一个
+```
+
+后续 `foreach ($pDir in $profileDirs)` 会**对每一个都写入依赖 + bundles 并各跑一次 pnpm install**。
+
+**危害**：在 `web` 与 `desktop` 并存的机器上（另一台机器正是如此），不设 `DSH_PROFILE`
+就会连 `web` 一起写 —— 而 `web` 里有旧世代 `dsh-infinite-gen-4` 与 20KB 的 `cordis.patch.yml`，
+在其上重算依赖有破坏既有配置的风险。D-015 报告中那位执行方**显式设了 `DSH_PROFILE=desktop`**
+才规避掉，属运气+谨慎，而非脚本保证。
+
+**修复**：改为**取第一个命中即返回**（与注释声明的"按优先级探测"一致）；要装多个 profile
+请逐个显式指定。已用 PS 5.1 与 PS 7 双端确认语法解析通过。
+
+**本机为什么没暴露**：本机 `web` 与 `desktop` 也确实并存，但此前安装都是我用
+`plugin_manager install_bundle`（作用于**当前** profile）完成的，从未跑过 `install.ps1`。
+
+### 问题二：`edit` 工具剥掉了 `install.ps1` 的 BOM（**D-015 断言当场抓到**）
+
+修问题一时我用 `edit` 工具改 `install.ps1`，改完发现 **PS 5.1 又解析失败** ——
+因为文本类编辑工具"读成 UTF-8 字符串再写回"会**静默丢掉 3 字节 BOM**。
+
+**这正是 D-015 里写下的那句预言的现场复现**："BOM 只是 3 字节前缀，任何编辑器另存或工具
+重写都可能静默剥掉；而失败只在 PS 5.1 上显现，开发机（PS 7）永远测不出来。"
+而 D-015 新加的断言**当场拦下了它**：
+`❌ install.ps1: 含非 ASCII 时必须有 UTF-8 BOM — 含 3968 个非 ASCII 字节却无 BOM`。
+—— 昨天加的约束，今天就抓到了真问题，且是我自己的操作造成的。
+
+**修复**：新增常驻工具 `scripts/fix-bom.mjs`（幂等）：按 .ps1 清单补 UTF-8 BOM，
+并明确**不碰 .sh/.bat**（前者 BOM 会破坏 shebang，后者会被 cmd.exe 当命令）。
+以后凡是编辑过 .ps1，跑一次 `node scripts/fix-bom.mjs` 即可。
+
+### 验证
+- `node scripts/fix-bom.mjs` → 补回 `install.ps1` 的 BOM；再跑一次报"无需修改"（幂等）。
+- **PS 5.1 解析**：`install.ps1` / `uninstall.ps1` 均 **OK**（修复前 install.ps1 为 FAIL）。
+- 回归：`verify_prompt` **88/0**、`verify_prompt_genx` 108/0、`verify_compat` COMPAT OK。
+
+### 给使用者的结论
+跑 `install.ps1` 时**务必显式指定目标 profile**（`$env:DSH_PROFILE = 'desktop'`），
+即便脚本已修好首个命中逻辑——显式指定是唯一能确保不碰其它 profile 的方式。
+
+---
+
 ## 候选方向（待评估）
 - ~~**(c) 按目标模型分内核**~~ → **D-005 证伪**，gen-x 低调内核跨模型通用，无需求。
 - **(d) armor LLM 辅助判定**：规则 + LLM 混合判定 refusal，突破词表天花板（D-004 的延伸）。

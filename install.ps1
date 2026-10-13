@@ -61,15 +61,16 @@ function Find-ProfileDirs {
         Write-Warn "环境变量 DSH_PROFILE 指向的目录不存在：$candidate（继续自动探测）"
     }
 
-    # 2) 按优先级探测常见目录名
-    $found = @()
+    # 2) 按优先级探测常见目录名：取【第一个命中】的，不收集全部。
+    #    历史行为是收集所有命中项并全部返回，那会在 web 与 desktop 并存的机器上
+    #    **静默同时写入两个 profile**（并对每个都跑 pnpm install）——对 web 这类
+    #    带大 patch 文件的 profile 有破坏既有配置的风险。要装多个请逐个显式指定。
     foreach ($name in @('web', 'default', 'desktop')) {
         $candidate = Join-Path $ProfilesRoot $name
         if (Test-Path (Join-Path $candidate 'package.json')) {
-            $found += $candidate
+            return @($candidate)
         }
     }
-    if ($found.Count -gt 0) { return $found }
 
     # 3) 列出所有候选目录让用户选择
     $dirs = @(Get-ChildItem -LiteralPath $ProfilesRoot -Directory -Force -ErrorAction SilentlyContinue |
