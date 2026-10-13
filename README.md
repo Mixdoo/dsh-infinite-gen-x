@@ -1,11 +1,11 @@
-# ⚔️ DeepSeek-V4.1 / V4 Flash 网络安全红队工具（无限X代）v0.6.0
+# ⚔️ DeepSeek-V4.1 / V4 Flash 网络安全红队工具（无限X代）v0.7.0
 
 <p align="center">
   <img src="assets/banner.png" alt="无限X代 Infinite Generation X" width="100%" />
 </p>
 
 <p align="center">
-  <a href="dsh://plugin/install?id=dsh-infinite-gen-x&name=%E6%97%A0%E9%99%90%E5%9B%9B%E4%BB%A3&version=0.6.0&repo=Minglink%2Fdsh-infinite-gen-x&permissions=%E7%B3%BB%E7%BB%9F%E6%8F%90%E7%A4%BA%E8%AF%8D%E6%B3%A8%E5%85%A5%2C%E5%AE%A2%E6%88%B7%E7%AB%AF%E7%8A%B6%E6%80%81%E6%9D%A1&downloadUrl=https%3A%2F%2Fgithub.com%2FMinglink%2Fdsh-infinite-gen-x%2Farchive%2Frefs%2Fheads%2Fmaster.zip">
+  <a href="dsh://plugin/install?id=dsh-infinite-gen-x&name=%E6%97%A0%E9%99%90%E5%9B%9B%E4%BB%A3&version=0.7.0&repo=Minglink%2Fdsh-infinite-gen-x&permissions=%E7%B3%BB%E7%BB%9F%E6%8F%90%E7%A4%BA%E8%AF%8D%E6%B3%A8%E5%85%A5%2C%E5%AE%A2%E6%88%B7%E7%AB%AF%E7%8A%B6%E6%80%81%E6%9D%A1&downloadUrl=https%3A%2F%2Fgithub.com%2FMinglink%2Fdsh-infinite-gen-x%2Farchive%2Frefs%2Fheads%2Fmaster.zip">
     <img src="https://img.shields.io/badge/DeepSeek%20Harness-🚀%20唤起桌面客户端一键安装无限X代-10B981?style=for-the-badge&logo=deepseek&logoColor=white" alt="唤起桌面客户端一键安装" />
   </a>
 </p>
@@ -47,25 +47,36 @@
 
 ---
 
-> 🔥 **V4.1-DeepSeek Flash 网络安全红队工具（无限X代）v0.6.0**。针对 V4.1 强化学习对抗进行深度适配与支持，支持桌面端与客户端一键安装。如果这个开源网安项目对你有帮助，欢迎点亮 Star ⭐。
+> 🔥 **V4.1-DeepSeek Flash 网络安全红队工具（无限X代）v0.7.0**。针对 V4.1 强化学习对抗进行深度适配与支持，支持桌面端与客户端一键安装。如果这个开源网安项目对你有帮助，欢迎点亮 Star ⭐。
 > 
-> **v0.6.0 纯净红队版**：原生采用零工具面架构，杜绝模型思考阶段的决策噪音；注入双层协同内核，仅保留系统提示词注入与实时状态投影。**严正声明：本项目严格打击与抵制（且不支持）模型生成 NSFW 等任何违法违规、违禁不良内容，技术体系仅限用于合法授权的逆向工程与网络安全研究。**
+> **v0.7.0 纯净红队版**：原生采用零工具面架构，杜绝模型思考阶段的决策噪音；注入双层协同内核，仅保留系统提示词注入与实时状态投影。**严正声明：本项目严格打击与抵制（且不支持）模型生成 NSFW 等任何违法违规、违禁不良内容，技术体系仅限用于合法授权的逆向工程与网络安全研究。**
 
 ---
 
-> ### 🧬 v0.6.0 双层内核说明（Dual-Layer Kernel）
+> ### 🧬 v0.7.0 双层内核说明（Dual-Layer Kernel）
 >
 > - 注入槽位：`infinite-gen-x:global-system-prompt`（Order 100）+ `infinite-gen-x:dual-layer-reinforce`（Order 200），
 >   由 `cordis.patch.yml` 的 `config.dualLayerInjection` 控制（改 `false` 即单段注入，行为等价）。
 > - 拒绝闭环纠偏段 `infinite-gen-x:refusal-corrective`（Order 150）由 `config.refusalCorrective` 控制。
 > - 两个开关都在本插件 `cordis.patch.yml` 的 `config` 块里改，无需动源码；改完重启 Harness 生效。
 > - `prompts/` 下三个内核文件（`infinite-gen-3.md` / `infinite-gen-x.md` / `infinite-gen-x.1-flash.md`）
+>
+> ### 🔧 v0.7.0 工程化收口
+>
+> - **评分器唯一实现**：判定词与评分逻辑只在 `scripts/lib/scorer.mjs`，运行时 armor 投影与评测台
+>   共用同一份（此前两处各写一份已漂移，同一回答在徽章与评测台会得到不同判定）。
+> - **开关 Config 化**：`dualLayerInjection` / `refusalCorrective` 两项走 `cordis.patch.yml`，
+>   改开关不需要动源码（此前是硬编码常量）。
+> - **DSH 兼容性元数据 + 门禁**：声明 `peerDependencies`（DSH 会强制检查，不满足会让插件被静默跳过），
+>   并提供 `npm run verify:compat` 在重启前预知兼容性。注意 prerelease 版本需写 `^0.2.0-rc.2` 而非 `^0.2.0`。
+> - **客户端清单纠偏**：移除误声明的 `immediately`（DSH 保留给 stage-one prefetch 的基础设施行，
+>   business 行声明它会让启动多等一次取包）。
 
 ---
 
 ## 📊 世代架构与能力对比
 
-| 维度 | 无限二代 | 无限三代 | 无限X代 (v0.6.0) |
+| 维度 | 无限二代 | 无限三代 | 无限X代 (v0.7.0) |
 |---|---|---|---|
 | **目标模型** | V3 / 早期 V4 | DeepSeek-V4 (mHC) | DeepSeek-V4.1 / V4-Pro / Flash 全系列 |
 | **运行时架构** | 单层提示词 | 安全基准版单层 | **双层协同注入（通用内核 + 强化镜像同源同构）** |
@@ -80,7 +91,7 @@
 ## 📁 项目目录结构
 
 ```
-无限X代v0.6.0/
+无限X代v0.7.0/
 ├── 🚀 一键安装与维护套件
 │   ├── install.ps1              # Windows 一键自动安装（自动配置环境，注册协议）
 │   ├── install.bat              # Windows 快捷双击批处理
@@ -88,10 +99,10 @@
 │   ├── uninstall.ps1            # Windows 一键卸载
 │   └── uninstall.sh             # Linux / macOS 一键卸载
 ├── 🧩 核心插件装载面 (标准 Cordis 架构)
-│   ├── package.json             # 插件元数据（dsh-infinite-gen-x v0.6.0）
+│   ├── package.json             # 插件元数据（dsh-infinite-gen-x v0.7.0）
 │   ├── cordis.patch.yml         # 核心 patch 声明
 │   ├── index.js                 # 插件核心入口（双层提示词注入 + profile 元数据 + 会话投影）
-│   ├── client.js                # 客户端半体（「⚫ 无限X代 v0.6.0」状态条）
+│   ├── client.js                # 客户端半体（「⚫ 无限X代 v0.7.0」状态条）
 │   └── HARNESS_PLUGIN.md        # 插件规范说明
 ├── 📜 网络安全红队系统提示词本体
 │   └── prompts/
@@ -174,7 +185,7 @@ node scripts/verify_compat.mjs      # 或 npm run verify:compat
 > 🌐 **插件生态市场**：[DeepSeek Harness Hub - DeepSeek 官方与开源生态市场 | 插件发现与一键安装](https://deepseek.stream/)
 
 <p align="center">
-  <a href="dsh://plugin/install?id=dsh-infinite-gen-x&name=%E6%97%A0%E9%99%90%E5%9B%9B%E4%BB%A3&version=0.6.0&repo=Minglink%2Fdsh-infinite-gen-x&permissions=%E7%B3%BB%E7%BB%9F%E6%8F%90%E7%A4%BA%E8%AF%8D%E6%B3%A8%E5%85%A5%2C%E5%AE%A2%E6%88%B7%E7%AB%AF%E7%8A%B6%E6%80%81%E6%9D%A1&downloadUrl=https%3A%2F%2Fgithub.com%2FMinglink%2Fdsh-infinite-gen-x%2Farchive%2Frefs%2Fheads%2Fmaster.zip">
+  <a href="dsh://plugin/install?id=dsh-infinite-gen-x&name=%E6%97%A0%E9%99%90%E5%9B%9B%E4%BB%A3&version=0.7.0&repo=Minglink%2Fdsh-infinite-gen-x&permissions=%E7%B3%BB%E7%BB%9F%E6%8F%90%E7%A4%BA%E8%AF%8D%E6%B3%A8%E5%85%A5%2C%E5%AE%A2%E6%88%B7%E7%AB%AF%E7%8A%B6%E6%80%81%E6%9D%A1&downloadUrl=https%3A%2F%2Fgithub.com%2FMinglink%2Fdsh-infinite-gen-x%2Farchive%2Frefs%2Fheads%2Fmaster.zip">
     <img src="https://img.shields.io/badge/DeepSeek%20Harness-🚀%20唤起桌面客户端一键安装无限X代-10B981?style=for-the-badge&logo=deepseek&logoColor=white" alt="唤起客户端一键安装" />
   </a>
 </p>
@@ -182,7 +193,7 @@ node scripts/verify_compat.mjs      # 或 npm run verify:compat
 🔗 **原生协议链接：**
 
 ```
-dsh://plugin/install?id=dsh-infinite-gen-x&name=%E6%97%A0%E9%99%90%E5%9B%9B%E4%BB%A3&version=0.6.0&repo=Minglink%2Fdsh-infinite-gen-x&permissions=%E7%B3%BB%E7%BB%9F%E6%8F%90%E7%A4%BA%E8%AF%8D%E6%B3%A8%E5%85%A5%2C%E5%AE%A2%E6%88%B7%E7%AB%AF%E7%8A%B6%E6%80%81%E6%9D%A1&downloadUrl=https%3A%2F%2Fgithub.com%2FMinglink%2Fdsh-infinite-gen-x%2Farchive%2Frefs%2Fheads%2Fmaster.zip
+dsh://plugin/install?id=dsh-infinite-gen-x&name=%E6%97%A0%E9%99%90%E5%9B%9B%E4%BB%A3&version=0.7.0&repo=Minglink%2Fdsh-infinite-gen-x&permissions=%E7%B3%BB%E7%BB%9F%E6%8F%90%E7%A4%BA%E8%AF%8D%E6%B3%A8%E5%85%A5%2C%E5%AE%A2%E6%88%B7%E7%AB%AF%E7%8A%B6%E6%80%81%E6%9D%A1&downloadUrl=https%3A%2F%2Fgithub.com%2FMinglink%2Fdsh-infinite-gen-x%2Farchive%2Frefs%2Fheads%2Fmaster.zip
 ```
 
 **网页端（前端）触发代码示例：**
@@ -195,7 +206,7 @@ export function installInfiniteGen4ToDesktop() {
   const params = new URLSearchParams({
     id: 'dsh-infinite-gen-x',
     name: '无限X代',
-    version: '0.6.0',
+    version: '0.7.0',
     repo: 'Minglink/dsh-infinite-gen-x',
     permissions: '系统提示词注入, 客户端状态条',
     downloadUrl: 'https://github.com/Minglink/dsh-infinite-gen-x/archive/refs/heads/master.zip',
@@ -215,7 +226,7 @@ export function installInfiniteGen4ToDesktop() {
 **HTML 静态链接方式：**
 
 ```html
-<a href="dsh://plugin/install?id=dsh-infinite-gen-x&name=%E6%97%A0%E9%99%90%E5%9B%9B%E4%BB%A3&version=0.6.0&repo=Minglink%2Fdsh-infinite-gen-x&permissions=%E7%B3%BB%E7%BB%9F%E6%8F%90%E7%A4%BA%E8%AF%8D%E6%B3%A8%E5%85%A5%2C%E5%AE%A2%E6%88%B7%E7%AB%AF%E7%8A%B6%E6%80%81%E6%9D%A1&downloadUrl=https%3A%2F%2Fgithub.com%2FMinglink%2Fdsh-infinite-gen-x%2Farchive%2Frefs%2Fheads%2Fmaster.zip" class="btn-install">
+<a href="dsh://plugin/install?id=dsh-infinite-gen-x&name=%E6%97%A0%E9%99%90%E5%9B%9B%E4%BB%A3&version=0.7.0&repo=Minglink%2Fdsh-infinite-gen-x&permissions=%E7%B3%BB%E7%BB%9F%E6%8F%90%E7%A4%BA%E8%AF%8D%E6%B3%A8%E5%85%A5%2C%E5%AE%A2%E6%88%B7%E7%AB%AF%E7%8A%B6%E6%80%81%E6%9D%A1&downloadUrl=https%3A%2F%2Fgithub.com%2FMinglink%2Fdsh-infinite-gen-x%2Farchive%2Frefs%2Fheads%2Fmaster.zip" class="btn-install">
   🚀 唤起客户端一键安装
 </a>
 ```
@@ -226,7 +237,7 @@ export function installInfiniteGen4ToDesktop() {
 |---|---|---|
 | id | `dsh-infinite-gen-x` | 插件唯一标识符 |
 | name | `无限X代`（URL 编码） | 插件展示名称 |
-| version | `0.6.0` | 语义化版本号 |
+| version | `0.7.0` | 语义化版本号 |
 | repo | `Minglink/dsh-infinite-gen-x` | 官方 GitHub 仓库 |
 | permissions | `系统提示词注入, 客户端状态条`（URL 编码） | 申请权限 |
 | downloadUrl | `https://github.com/Minglink/dsh-infinite-gen-x/archive/refs/heads/master.zip` | 离线 zip 下载直链 |
@@ -273,7 +284,7 @@ chmod +x install.sh uninstall.sh
 
 ## ⚡ 验证生效
 
-1. **界面状态条**：重启后在输入框上方应显示醒目的绿色状态条 **「⚫ 无限X代 v0.6.0」**。
+1. **界面状态条**：重启后在输入框上方应显示醒目的绿色状态条 **「⚫ 无限X代 v0.7.0」**。
 2. **测试离线回归**：
    ```bash
    # 运行 103 项断言（提示词完备性、双层内核同源性、V4.1车道、纯净架构、评分器等）

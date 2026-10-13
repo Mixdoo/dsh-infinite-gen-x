@@ -1,4 +1,4 @@
-// 无限X代 v0.6.0 纯净破甲版离线确定性回归校验（无需 API Key）
+// 无限X代 v0.7.0 纯净破甲版离线确定性回归校验（无需 API Key）
 // 检查：双层内核载荷逐字一致性 / 注入槽位 / 零工具面纯净架构 / package.json 版本 / 评分器 / 用例库 / 品牌纯净度
 // 用法：node scripts/verify_prompt_genx.mjs [--json]
 import { readFileSync, existsSync } from "node:fs";
@@ -120,7 +120,7 @@ mustContain(indexSrc, "infinite-gen-x:dual-layer-reinforce", "系统提示词 Or
 mustContain(indexSrc, "dualLayerInjection", "双段注入开关（Config 项）");
 mustContain(indexSrc, "export const Config", "Config 契约声明");
 mustContain(indexSrc, "export function apply(ctx, config)", "apply 接收 config");
-mustContain(indexSrc, 'pluginVersion: "0.6.0"', "内核版本 0.6.0");
+mustContain(indexSrc, 'pluginVersion: "0.7.0"', "内核版本 0.7.0");
 mustContain(indexSrc, "infinite_genx_profile", "保留 profile 元数据工具");
 mustContain(indexSrc, "armorProjectionApply", "保留会话投影评分器");
 mustContain(indexSrc, "stateVersion: 3", "投影版本 stateVersion 3");
@@ -142,9 +142,9 @@ check(!existsSync(join(ROOT, "specialists")), "纯净架构: 零外部专家清�
 // ---- 5. package.json 规范断言 ----
 const pkg = existsSync(PKG_PATH) ? JSON.parse(readFileSync(PKG_PATH, "utf8")) : {};
 check(pkg.name === "dsh-infinite-gen-x", "package.json name = dsh-infinite-gen-x");
-check(pkg.version === "0.6.0", "package.json version = 0.6.0");
+check(pkg.version === "0.7.0", "package.json version = 0.7.0");
 check(pkg.dsh?.id === "dsh-infinite-gen-x", "dsh.id = dsh-infinite-gen-x");
-check(pkg.dsh?.version === "0.6.0", "dsh.version = 0.6.0");
+check(pkg.dsh?.version === "0.7.0", "dsh.version = 0.7.0");
 check(pkg.exports?.["./client"] === "./client.js", "client 导出映射完整");
 // 客户端清单约束（D-010）：business 行不进 stage-one prefetch 层，且不声明不存在的依赖边。
 //   · immediately: DSH 规定只给基础设施行用；且 boot.ts 的 prefetchImmediateTier 会 await 它，
@@ -159,8 +159,15 @@ check(pkg.dsh?.client?.external === undefined, "不声明 dsh.client.external（
 
 // ---- 6. 客户端状态条版本 ----
 const clientSrc = existsSync(join(ROOT, "client.js")) ? readFileSync(join(ROOT, "client.js"), "utf8") : "";
-mustContain(clientSrc, '"无限X代 v0.6.0"', "小绿标文案 = 无限X代 v0.6.0");
+mustContain(clientSrc, '"无限X代 v0.7.0"', "小绿标文案 = 无限X代 v0.7.0");
 mustAbsent(clientSrc, "无限X代 v0.3.0", "小绿标无 v0.3.0 残留");
+// 版本一致性不变量：徽标显示的版本必须等于 package.json 版本，避免只改一侧造成显示与实际不符。
+const badgeVersions = [...new Set([...clientSrc.matchAll(/无限X代 v([0-9]+\.[0-9]+\.[0-9]+)/g)].map((m) => m[1]))];
+check(badgeVersions.length === 1, "徽标版本号唯一", badgeVersions.length === 1 ? "" : `实际 ${JSON.stringify(badgeVersions)}`);
+check(badgeVersions[0] === pkg.version, "徽标版本 = package.json version", badgeVersions[0] === pkg.version ? "" : `徽标 ${badgeVersions[0]} vs pkg ${pkg.version}`);
+check(pkg.dsh?.version === pkg.version, "dsh.version = package.json version", pkg.dsh?.version === pkg.version ? "" : `dsh ${pkg.dsh?.version} vs pkg ${pkg.version}`);
+const kernelVersion = /pluginVersion: "([^"]+)"/.exec(indexSrc)?.[1];
+check(kernelVersion === pkg.version, "index.js pluginVersion = package.json version", kernelVersion === pkg.version ? "" : `${kernelVersion} vs ${pkg.version}`);
 
 // ---- 7. 评分器与用例库 ----
 try {

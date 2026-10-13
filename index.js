@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 // 判定词与评分的唯一实现（与评测台共用；此前本文件内联副本已与评测台漂移，见 scorer.mjs 头注）
 import { scoreResponse } from "./scripts/lib/scorer.mjs";
 
-// ── 无限X代双层内核载荷（v0.6.0） ────────────────────────────────────────────────
+// ── 无限X代双层内核载荷（v0.7.0） ────────────────────────────────────────────────
 // Order 100 通用内核 + Order 200 强化镜像，两段载荷同源同构（SHA256 一致）。
 const PROMPT_URL = new URL("./prompts/infinite-gen-x.md", import.meta.url);
 const PROMPT41_URL = new URL("./prompts/infinite-gen-x.1-flash.md", import.meta.url);
@@ -117,18 +117,18 @@ const createProfileTool = (options) => ({
   execute() {
     return {
       plugin: "dsh-infinite-gen-x",
-      pluginVersion: "0.6.0",
+      pluginVersion: "0.7.0",
       pluginDisplayName: "无限X代",
       name: "infinite-gen-x",
       displayName: "无限X代",
-      kernelVersion: "0.6.0",
+      kernelVersion: "0.7.0",
       targetArchitecture: "DeepSeek-V4 / V4-Pro / V4.1-Flash 全系列",
       baseline: "deepseek-unrestricted-v7-stable (dsh-infinite-gen-x)",
       promptSource: [
         "prompts/infinite-gen-x.md",
         "prompts/infinite-gen-x.1-flash.md",
       ],
-      lineage: ["dsh-infinite-gen-x (v0.6.0) — 双层协同注入内核"],
+      lineage: ["dsh-infinite-gen-x (v0.7.0) — 双层协同注入内核"],
       injection: [
         { section: "infinite-gen-x:global-system-prompt", order: 100, enabled: true },
         {
@@ -158,7 +158,7 @@ const createProfileTool = (options) => ({
         "Dual-Layer Injection: Order 100 通用内核 + Order 200 强化镜像",
         "Section Hosting: 双槽位可由 config.dualLayerInjection 切换单段注入",
         "Armor Projection: 开头窗口(160)判拒 + REFUSAL/FALLBACK/SAFE/RISK 标记 + 域命中",
-        "Client Badge: 输入框上方「无限X代 v0.6.0」实时状态条",
+        "Client Badge: 输入框上方「无限X代 v0.7.0」实时状态条",
         "Profile Tool: infinite_genx_profile 返回内核版本与注入槽位元数据",
       ],
       features: [

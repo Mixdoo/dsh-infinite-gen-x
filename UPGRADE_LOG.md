@@ -523,14 +523,6 @@ Tier-1 #3「兼容性元数据」。原计划照抄 dsh-purge 的 `dshTarget` + 
 
 ---
 
-## 候选方向（待评估）
-- ~~**(c) 按目标模型分内核**~~ → **D-005 证伪**，gen-x 低调内核跨模型通用，无需求。
-- **(d) armor LLM 辅助判定**：规则 + LLM 混合判定 refusal，突破词表天花板（D-004 的延伸）。
-- **(e) 闭环当场拦截（路径 2）**：armor 检测 refusal 后当场重发请求（学 llm-retry），
-  而非下一轮纠偏。工程量大，待路径 1（D-003）验证有效后再评估。
-
----
-
 ## D-010 客户端清单纠偏（移除 `immediately`）—— 已实现；`dsh.client.inject` 经核查无需声明
 
 **日期**：2026-09-28
@@ -590,8 +582,69 @@ Tier-1 #4「`dsh.client.inject`」——原计划照 purge 声明 5 个客户端
 请在 `web` profile 刷新页面后确认：输入框上方「无限X代 v0.6.0」状态条仍正常出现与着色。
 
 ### 后续（Tier-1 剩余项）
-- 发布工程（`.github/workflows/release.yml` / `dsh.install` / `bin`）：取决于是否要发 npm。
+- 发布工程（`.github/workflows/release.yml` / `dsh.install` / `bin`）：**用户裁定不做（不发 npm / 不发 Hub）**，本条划掉。
 - 文档工程：双语 README、`docs/` 截图、`release-notes.md`。
+
+---
+
+## D-011 版本号统一升级 0.6.0 → 0.7.0
+
+**日期**：2026-09-28
+**状态**：✅ 已实现
+**Commit**：（本条目随实现同批提交）
+
+### 起因
+用户要求把客户端徽标文案「无限X代 v0.6.0」改为「v0.7.0」。
+
+### 决策：不做"只改徽标文案"，而是全库一致升级
+只改徽标会造成**徽标 0.7.0 / 包版本 0.6.0** 的不一致（用户会以为装了新版、实际
+`package.json` 仍是 0.6.0，且 `infinite_genx_profile` 工具与 `verify_*` 断言都还是旧值）。
+D-007~D-010 四轮工程化改动（评分器唯一实现 / Config 化 / 兼容性元数据 + 门禁 / 客户端清单纠偏）
+本身也够一个版本号，故整体升到 **0.7.0**。
+
+### 改动范围（48 处，11 个文件）
+| 文件 | 处数 | 内容 |
+|---|---|---|
+| `README.md` | 15 | 标题、版本说明块、对比表列头、目录树、YAML 示例、验证步骤、dsh:// 安装 URL |
+| `scripts/verify_prompt_genx.mjs` | 9 | 头部注释 + 4 条断言（`pluginVersion` / `pkg.version` / `dsh.version` / 徽标文案） |
+| `index.js` | 5 | 头部注释、`pluginVersion`、`kernelVersion`、`lineage`、能力清单文案 |
+| `scripts/verify_prompt.mjs` | 5 | 头部注释 + `pluginVersion` 断言 + install.ps1/sh 状态条断言 |
+| `package.json` | 3 | `version`、`dsh.version`、`description` |
+| `client.js` | 2 | 徽标文案（`text` 与 `title`） |
+| `install.ps1` / `install.sh` | 各 2 | 安装横幅 + 验证提示 |
+| `scripts/run_bank_live.mjs` / `verify_prompt_genx1.mjs` | 各 1 | 头部注释 |
+| `tests/测试数据获取方式-v4pro.md` | 1 | 状态条验证步骤 |
+
+### 两处刻意不改（保持历史与语义正确）
+1. **`UPGRADE_LOG.md` 不重写**：本档案约定"不删旧记录，只追加"。D-001~D-010 里出现的
+   `0.6.0` 是当时的历史事实，原样保留。**注**：D-010 节末尾那条"待人工确认"写的是
+   确认 v0.6.0 状态条——该徽标现已随 D-011 变为 **v0.7.0**，确认时请按 v0.7.0 看。
+2. **`HARNESS_PLUGIN.md` 版本历史表加行而非改行**：v0.6.0 那一行改为非粗体（历史上的当前版），
+   新增 **v0.7.0** 行说明本轮工程化收口内容。
+
+### 验证
+- **一致性**：`package.json.version` / `dsh.version` / `index.js.pluginVersion` /
+  `kernelVersion` / `client.js` 徽标（`text` + `title` 两处）全部 = `0.7.0`，无残留。
+- 替换脚本自校验：排除文件之外 **无 `0.6.0` 残留**。
+- `verify_prompt_genx.mjs` 新增 4 条**跨文件版本一致性不变量**（不只是各自比对字面量）：
+  `徽标版本号唯一` / `徽标版本 = package.json version` / `dsh.version = package.json version` /
+  `index.js pluginVersion = package.json version`。
+- **负例实测**（证明非空断言）：把徽标改成 `v0.8.0` 而不动 `package.json` →
+  断言报 `徽标 0.8.0 vs pkg 0.7.0`（98/2）；恢复 → **100/0**。
+- 回归：`verify_prompt_genx` **100/0**、`verify_prompt_genx1` 96/0、`verify_prompt` 62/0、
+  `verify_compat` OK、`scorer_semantics` OK、`node --check` index.js + client.js 通过。
+
+### 待人工确认（叠加在 D-010 之上）
+`web` profile 重启/刷新后，输入框上方状态条应显示 **「⚫ 无限X代 v0.7.0」**。
+版本一致性已由上述 4 条不变量绑定，以后漏改任一侧都会被断言拦下。
+
+---
+
+## 候选方向（待评估）
+- ~~**(c) 按目标模型分内核**~~ → **D-005 证伪**，gen-x 低调内核跨模型通用，无需求。
+- **(d) armor LLM 辅助判定**：规则 + LLM 混合判定 refusal，突破词表天花板（D-004 的延伸）。
+- **(e) 闭环当场拦截（路径 2）**：armor 检测 refusal 后当场重发请求（学 llm-retry），
+  而非下一轮纠偏。工程量大，待路径 1（D-003）验证有效后再评估。
 
 ---
 
