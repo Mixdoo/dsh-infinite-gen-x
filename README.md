@@ -103,8 +103,9 @@
 │   └── LICENSE                  # MIT License
 ├── 🛡️ 确定性回归测试套件
 │   ├── scripts/
-│   │   ├── lib/scorer.mjs       # 开头窗口判拒评分器
+│   │   ├── lib/scorer.mjs       # 开头窗口判拒评分器（判定词唯一实现，运行时与评测台共用）
 │   │   ├── verify_prompt.mjs    # 经典确定性校验
+│   │   ├── verify_compat.mjs    # 兼容性门禁：验证 peerDependencies 不会被 DSH 判为不兼容
 │   │   ├── verify_prompt_gen4.mjs # 四代全量回归断言（103 项严苛断言）
 │   │   └── verify_prompt_gen41.mjs # V4.1 专项断言
 │   └── tests/
@@ -114,6 +115,53 @@
 │       └── v4pro-benchmark.jsonl  # V4-Pro 评测基准
 └── 📁 静态资源 (assets/)
 ```
+
+---
+
+## 🧩 兼容性与配置
+
+### 版本要求（DSH 门禁 + Node）
+
+`package.json` 声明了 DSH 真正会检查的兼容性字段：
+
+| 字段 | 值 | 作用 |
+|---|---|---|
+| `peerDependencies["@deepseek-ai/dsh-*"]` | `^0.2.0-rc.2` | **DSH 会强制检查**。不满足时 DSH 会把本 bundle 静默跳过（进 `skippedBundles`），插件不加载 |
+| `peerDependencies["@deepseek-ai/cordis"]` | `^4.0.0` | 插件协议依赖，记录用（DSH 门禁不检查非 `dsh-` 前缀的项） |
+| `engines.node` | `^22.19 \|\| >=24` | 与宿主 DSH 的 Node 要求一致 |
+
+> ⚠️ **prerelease 陷阱**：DSH 的检查用 `semver.satisfies(..., { includePrerelease: true })`，而
+> `0.2.0-rc.2` 在 semver 里**排在 `0.2.0` 之前**，所以想当然写 `^0.2.0` 会判**不兼容**、
+> 导致插件被跳过。必须写 `^0.2.0-rc.2`（= `>=0.2.0-rc.2 <0.3.0`）。
+
+升级 DSH 前后跑一次门禁，可在重启前发现"插件会被跳过"：
+
+```bash
+node scripts/verify_compat.mjs      # 或 npm run verify:compat
+```
+
+原理：脚本按 DSH 源码 `evaluatePluginCompatibility` 的逻辑，读
+`@deepseek-ai/dsh-app-boot` 的版本作为运行时版本，用真实 semver 逐项判定。
+
+### 运行时配置项
+
+两个开关走 `cordis.patch.yml` 的 `config` 块，改完重启 Harness 生效（无需改源码）：
+
+| 配置项 | 缺省 | 作用 |
+|---|---|---|
+| `dualLayerInjection` | `true` | `true` 双层注入（Order 100 + 200 各一份内核载荷）；`false` 单段注入，省重复 token |
+| `refusalCorrective` | `true` | `true` armor 检测到上轮拒绝时，下一轮在 Order 150 追加纠偏；`false` 只投影不干预 |
+
+```yaml
+- insert:
+    - id: dsh-infinite-gen-x
+      name: dsh-infinite-gen-x
+      config:
+        dualLayerInjection: true
+        refusalCorrective: true
+```
+
+运行时元数据工具 `infinite_genx_profile` 会返回本次激活实际生效的 `config` 与三个槽位的 `enabled`。
 
 ---
 

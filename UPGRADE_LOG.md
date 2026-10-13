@@ -449,7 +449,74 @@ gen-x 此前违反该规范。
 A/B 对照（双层 vs 单段注入、闭环纠偏开 vs 关）从"改源码+重启"降级为纯配置操作。
 
 ### 后续（Tier-1 剩余项）
-- 兼容性元数据：`dshTarget` / `peerDependencies` / `engines`。
+- ~~兼容性元数据：`dshTarget` / `peerDependencies` / `engines`~~ → **D-009 完成**
+  （其中 `dshTarget` 经核查为无效字段，未加）。
+
+---
+
+## D-009 兼容性元数据（peerDependencies + engines）—— 已实现；`dshTarget` 经核查为无效字段
+
+**日期**：2026-09-28
+**状态**：✅ 已实现
+**Commit**：（本条目随实现同批提交）
+
+### 起因
+Tier-1 #3「兼容性元数据」。原计划照抄 dsh-purge 的 `dshTarget` + `peerDependencies` + `engines`。
+
+### 核查推翻 `dshTarget`
+`dshTarget` 在 **DSH 源码 `packages/`、DSH 文档 `*.md`、已安装 `@deepseek-ai/*` 包**中
+**均无任何读取点**（三处 grep 全部零命中）。它是 purge 自己的约定，写了不产生任何效果。
+**决定不加**——加一个看起来生效实则无效的字段会误导后来者。
+
+### 真正生效的机制（读 DSH 源码定案）
+`packages/boot/app-boot/src/plugin-compatibility.ts` 的 `evaluatePluginCompatibility`：
+
+1. **只检查** `name === '@deepseek-ai/dsh'` 或 `name.startsWith('@deepseek-ai/dsh-')` 的 peer，
+   其余 `continue` 跳过 —— 所以 purge 对 `@deepseek-ai/cordis` 的 peer **也不参与**兼容性判定。
+2. `workspace:^` / `workspace:~` / `workspace:*` 视为"当前运行时版本"，否则
+   `semver.satisfies(runtime, range, { includePrerelease: true })`。
+3. 运行时版本 = `@deepseek-ai/dsh-app-boot` 的 package.json `version`（实测本机 `0.2.0-rc.2`）。
+4. **不兼容的后果 = 静默跳过**：`loadProfileDirectory` 里该 throw 被 catch，
+   bundle 进 `skippedBundles`（不崩、manifest 不变），表现为"插件突然不加载"。
+
+### ⚠️ prerelease 陷阱（差点踩中）
+`0.2.0-rc.2` 在 semver 里**排在 `0.2.0` 之前**，所以想当然写 `^0.2.0` 会判**不兼容**。
+实测（DSH 真实运行时 `0.2.0-rc.2` + 真实 semver 7.8.5）：
+
+| 范围 | 判定 |
+|---|---|
+| `@deepseek-ai/dsh-agent@^0.2.0` | ✗ **不兼容 → 会跳过 gen-x** |
+| `@deepseek-ai/dsh-agent@^0.2.0-rc.2` | ✓ |
+| `@deepseek-ai/dsh-agent@*` | ✓ |
+
+采用 `^0.2.0-rc.2`（= `>=0.2.0-rc.2 <0.3.0`），在 `0.2.0-rc.2`（桌面 app）与
+`0.2.1-alpha.1`（源码 checkout）两个实时版本上**均已验证通过**。
+
+### 实现
+`package.json` 新增：
+- `peerDependencies`：gen-x 实际消费的三个服务所属包
+  `@deepseek-ai/dsh-system-prompt` / `dsh-tools` / `dsh-session-projection` 各 `^0.2.0-rc.2`；
+  `@deepseek-ai/cordis` `^4.0.0`（插件协议依赖，仅记录，门禁不检查）。
+- `engines.node`：`^22.19 || >=24` —— 与宿主 DSH 的要求一致（而非 purge 那样写宽松的 `>=18`）。
+- **未加 `dshTarget`**（已证无效）。
+
+新增 `scripts/verify_compat.mjs` + `npm run verify:compat`：按 DSH 源码逐字复刻判定，
+读真实运行时版本与真实 semver，**在重启前预知"插件是否会被跳过"**；
+找不到 DSH 安装时打印 SKIP 并退出 0（不阻塞无 DSH 的机器）。
+
+### 验证
+- **门禁正负例都实测**（避免空断言）：把 `dsh-tools` 改成 `^0.2.0` → 门禁 `exit 1`
+  并打印修法；恢复 → `exit 0`。证明门禁真能抓到坏情况。
+- `engines.node` 对本机 node v24.16.0 ✓。
+- 回归：`verify_prompt_genx` 92/0、`verify_prompt_genx1` 92/0、`verify_prompt` 62/0、`scorer_semantics` OK。
+
+### 副产物发现（与本条无关但重要）
+本会话运行在 **`desktop` profile**（`DSH_PROFILE=desktop`），而 gen-x 只装在 **`web` profile**
+（`web` 的 `dependencies` 与 `bundles` 都含 gen-x；`desktop` 两者都没有）。
+即：**当前会话并未加载 gen-x**；D-008 的 config 变更与徽章行为只在 `web` profile 生效。
+若要在 desktop 环境使用 gen-x，需另行安装进该 profile。
+
+### 后续（Tier-1 剩余项）
 - `dsh.client.inject`：需先确认 `client.js` 是否真的消费那些客户端服务（无消费者就不该声明）。
 - 发布工程（`.github/workflows/release.yml` / `dsh.install` / `bin`）：取决于是否要发 npm。
 - 文档工程：双语 README、`docs/` 截图、`release-notes.md`。

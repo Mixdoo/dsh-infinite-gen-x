@@ -30,7 +30,17 @@
   "scripts": {
     "harness:check": "node --check index.js && node --check client.js",
     "verify": "node scripts/verify_prompt_genx.mjs",
-    "verify:genx": "node scripts/verify_prompt_genx.mjs"
+    "verify:genx": "node scripts/verify_prompt_genx.mjs",
+    "verify:compat": "node scripts/verify_compat.mjs"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "^4.0.0",
+    "@deepseek-ai/dsh-session-projection": "^0.2.0-rc.2",
+    "@deepseek-ai/dsh-system-prompt": "^0.2.0-rc.2",
+    "@deepseek-ai/dsh-tools": "^0.2.0-rc.2"
+  },
+  "engines": {
+    "node": "^22.19 || >=24"
   },
   "dsh": {
     "id": "dsh-infinite-gen-x",

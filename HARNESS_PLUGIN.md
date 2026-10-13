@@ -35,6 +35,30 @@
 
 三个文件的 SHA256 完全相同，`scripts/verify_prompt_gen4.mjs` / `verify_prompt.mjs` 会强断言这一点。
 
+## 兼容性（DSH 门禁）
+
+`package.json` 的 `peerDependencies` 里，`@deepseek-ai/dsh-*` 项会被 DSH 的
+`evaluatePluginCompatibility` 强制检查；不满足时 DSH 把本 bundle **静默跳过**
+（进 `skippedBundles`，插件不加载、manifest 不变）。
+
+| 字段 | 值 |
+|---|---|
+| `peerDependencies["@deepseek-ai/dsh-system-prompt"]` | `^0.2.0-rc.2` |
+| `peerDependencies["@deepseek-ai/dsh-tools"]` | `^0.2.0-rc.2` |
+| `peerDependencies["@deepseek-ai/dsh-session-projection"]` | `^0.2.0-rc.2` |
+| `peerDependencies["@deepseek-ai/cordis"]` | `^4.0.0`（非 `dsh-` 前缀，DSH 门禁不检查，仅记录） |
+| `engines.node` | `^22.19 \|\| >=24`（与宿主一致） |
+
+两个要点：
+
+1. **prerelease 陷阱**：检查用 `includePrerelease: true`，而 `0.2.0-rc.2 < 0.2.0`，
+   所以写 `^0.2.0` 会判**不兼容**并导致插件被跳过。必须写 `^0.2.0-rc.2`。
+2. **`dshTarget` 不是 DSH 字段**（DSH 源码、文档、已安装包中均无该字段的读取点），
+   写了不产生任何效果；生效的只有 `peerDependencies`。
+
+升级 DSH 前后跑 `node scripts/verify_compat.mjs`（或 `npm run verify:compat`），
+在重启前预知"插件是否会被跳过"。
+
 ## 版本
 
 | 版本 | 说明 |
@@ -46,6 +70,7 @@
 
 ```powershell
 node --check index.js
+node scripts/verify_compat.mjs        # DSH 兼容性门禁（peerDependencies 不被判不兼容）
 node scripts/verify_prompt_gen4.mjs   # 68 项：内核载荷逐字一致 + 注入槽位 + 投影
 node scripts/verify_prompt.mjs        # 65 项：载荷锚点 + 导出 + 安装协议 + 用例库
 ```
