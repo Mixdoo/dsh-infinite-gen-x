@@ -6,7 +6,7 @@
   "main": "./index.js",
   "repository": {
     "type": "git",
-    "url": "https://github.com/luoguangyu/dsh-infinite-gen-x.git"
+    "url": "https://github.com/a137460387/dsh-infinite-gen-x.git"
   },
   "exports": {
     ".": "./index.js",
@@ -36,7 +36,7 @@
     "id": "dsh-infinite-gen-x",
     "name": "无限X代",
     "version": "0.6.0",
-    "repo": "luoguangyu/dsh-infinite-gen-x",
+    "repo": "a137460387/dsh-infinite-gen-x",
     "permissions": "系统提示词注入, 客户端状态条",
     "bundle": {
       "patch": "./cordis.patch.yml"
