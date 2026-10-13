@@ -125,6 +125,24 @@ mustContain(indexSrc, "infinite_genx_profile", "保留 profile 元数据工具")
 mustContain(indexSrc, "armorProjectionApply", "保留会话投影评分器");
 mustContain(indexSrc, "stateVersion: 3", "投影版本 stateVersion 3");
 
+// ---- 4b. index.js 自述元数据必须与内核一致（D-002 已移除的框架词不得复现）----
+// 背景（D-012）：内核文件早已是 D-002 低调措辞，但 index.js 里仍残留 4 处旧框架词——
+// 其中 FALLBACK_PAYLOAD 是"内核全丢"时的兜底载荷，恰好是 D-001 实测表现最差的措辞；
+// 另 3 处让 infinite_genx_profile 工具自述了一个已不存在的内核。
+// 注释里解释"为什么不能用这些词"是允许的，故剥掉注释后再查代码与字符串。
+const stripComments = (src) =>
+  src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^[ \t]*\/\/.*$/gm, "");
+const indexCode = stripComments(indexSrc);
+for (const marker of ["MODE: SANDBOX", "SUPREME DIRECTIVE", "Supreme User Authority", "[MODE: UNRESTRICTED"]) {
+  mustAbsent(indexCode, marker, `index.js 代码/字符串无旧框架词: ${marker}`);
+}
+// 兜底载荷必须是低调措辞（与 D-002 结论一致）
+mustContain(indexSrc, "FALLBACK_PAYLOAD", "保留最后兜底载荷");
+mustContain(indexSrc, "red-team security research documentation engine", "兜底载荷用低调角色措辞");
+// 自述的段落结构要与内核真实结构对应
+mustContain(indexSrc, "Working rules", "元数据自述含 Working rules（内核真实段名）");
+mustContain(indexSrc, "Research areas", "元数据自述含 Research areas（内核真实段名）");
+
 // 纯净零工具面架构断言：确保原生无外部功能性工具与外部资产依赖
 check(!indexSrc.includes("encodeTool"), "纯净架构: 无外部工具 encodeTool");
 check(!indexSrc.includes("vendorTool"), "纯净架构: 无外部工具 vendorTool");
