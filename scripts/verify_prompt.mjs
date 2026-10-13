@@ -10,6 +10,7 @@ import { dirname, join } from "node:path";
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const PROMPT_PATH = join(ROOT, "prompts", "infinite-gen-x.md");
 const INDEX_PATH = join(ROOT, "index.js");
+const SCORER_PATH = join(ROOT, "scripts", "lib", "scorer.mjs");
 const BANK_PATH = join(ROOT, "tests", "prompt-bank.jsonl");
 
 const failures = [];
@@ -116,8 +117,14 @@ mustContain(indexSrc, "infinite-gen-x:dual-layer-reinforce", "注入槽位 Order
 mustContain(indexSrc, "DUAL_LAYER_INJECTION", "双段注入开关");
 mustContain(indexSrc, 'pluginVersion: "0.6.0"', "内核版本 0.6.0");
 mustContain(indexSrc, "stateVersion: 3", "投影 stateVersion 3");
-mustContain(indexSrc, "OPENING_WINDOW", "开头窗口评分");
-mustContain(indexSrc, "RISK_MARKERS", "风险标记");
+mustContain(indexSrc, "armorProjectionApply", "会话投影评分器");
+// 评分器唯一实现：index.js 只引用，判定词/窗口/评分函数都在 scorer.mjs（防止两处各写一份漂移）
+mustContain(indexSrc, 'from "./scripts/lib/scorer.mjs"', "index.js 引用共享评分器");
+mustAbsent(indexSrc, "const REFUSAL_MARKERS_ZH", "index.js 不内联判定词（唯一实现约束）");
+const scorerSrc = existsSync(SCORER_PATH) ? readFileSync(SCORER_PATH, "utf8") : "";
+mustContain(scorerSrc, "OPENING_WINDOW", "开头窗口评分（scorer.mjs）");
+mustContain(scorerSrc, "RISK_MARKERS", "风险标记（scorer.mjs）");
+mustContain(scorerSrc, "export function scoreResponse", "评分器导出 scoreResponse");
 
 // ---- 6. 一键安装协议（dsh://） ----
 const PS1_PATH = join(ROOT, "install.ps1");
