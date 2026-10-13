@@ -16,20 +16,48 @@
 //
 // 用法：node scripts/verify_compat.mjs
 // 找不到 DSH 安装或 semver 时打印 SKIP 并以 0 退出（不阻塞无 DSH 的开发机）。
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync, existsSync, readdirSync } from "node:fs";
 import { createRequire } from "node:module";
 import { join } from "node:path";
 
 const MANIFEST = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"));
 
 // DSH 安装锚点候选：可用 DSH_APP_ROOT 显式指定，否则依次探测常见位置。
+// 注意 DSH 有三种落点：全局 Program Files 安装、**按用户安装**（%LOCALAPPDATA%\Programs\<名字>）
+// 与源码 checkout。只写死 Program Files 会在按用户安装的机器上探测失败并报 SKIP
+// （实测：另一台机器装在 %LOCALAPPDATA%\Programs\DSH Desktop，导致 SKIP）。
+const APP_SUFFIX = join("resources", "app");
+function discoverInstalled() {
+  const roots = [process.env.LOCALAPPDATA && join(process.env.LOCALAPPDATA, "Programs"), process.env.ProgramFiles, process.env["ProgramFiles(x86)"]]
+    .filter((r) => typeof r === "string" && r.length > 0 && existsSync(r));
+  const found = [];
+  for (const root of roots) {
+    let entries;
+    try {
+      entries = readdirSync(root, { withFileTypes: true });
+    } catch {
+      continue; // 目录不可读：跳过该根
+    }
+    for (const entry of entries) {
+      if (!entry.isDirectory() || !/dsh|deepseek/i.test(entry.name)) continue;
+      const app = join(root, entry.name, APP_SUFFIX);
+      if (existsSync(join(app, "node_modules", "@deepseek-ai", "dsh-app-boot", "package.json"))) found.push(app);
+    }
+  }
+  return found;
+}
+
 const ANCHORS = [
   process.env.DSH_APP_ROOT,
   process.env.DSH_INSTALL_DIR,
+  ...discoverInstalled(),
   "C:/Program Files/DSH NEXT/resources/app",
   "C:/Program Files/DeepSeek Harness/resources/app",
   "D:/code/Ai/fork/deepseek-harness",
-].filter((a) => typeof a === "string" && a.length > 0);
+]
+  .filter((a) => typeof a === "string" && a.length > 0)
+  // 去重：发现式与硬编码式可能命中同一安装，重复探测只会让输出噪音翻倍
+  .filter((a, i, all) => all.findIndex((b) => b.replace(/\\/g, "/").toLowerCase() === a.replace(/\\/g, "/").toLowerCase()) === i);
 
 function probe(anchor) {
   const bootPkg = join(anchor, "node_modules", "@deepseek-ai", "dsh-app-boot", "package.json");
@@ -47,7 +75,9 @@ function probe(anchor) {
 const found = ANCHORS.map(probe).filter(Boolean);
 if (found.length === 0) {
   console.log("SKIP: 未找到可用的 DSH 安装（或 semver 不可解析），跳过兼容性检查。");
-  console.log("      可用 DSH_APP_ROOT=<resources/app 路径> 指定。");
+  console.log("      SKIP 不等于通过 —— 请用 DSH_APP_ROOT=<DSH 的 resources/app 绝对路径> 指定后重跑。");
+  console.log("      已探测的候选：");
+  for (const a of ANCHORS) console.log(`        - ${a}`);
   process.exit(0);
 }
 

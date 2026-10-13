@@ -145,6 +145,31 @@ mustContain(ps1, "dsh-infinite-gen-x", "install.ps1: 插件名");
 mustContain(ps1, "无限X代 v0.7.1", "install.ps1: 状态条版本提示");
 mustContain(sh, "DSH_PROFILE", "install.sh: DSH_PROFILE 探测");
 mustContain(sh, "无限X代 v0.7.1", "install.sh: 状态条版本提示");
+
+// ---- 6c. 安装脚本的编码契约（D-015）----
+// 背景：install.ps1 / uninstall.ps1 含大量中文，但曾是无 BOM 的 UTF-8。
+// Windows PowerShell 5.1 无 BOM 时按系统 ANSI 代码页读脚本 → 中文字面量被破坏 → 解析失败，
+// 脚本一行都跑不了（实测：PS 5.1 报 6 处语法错误，首个错误正是插件名列表里的中文）。
+// 而 install.bat 显式调用 powershell.exe（即 5.1），所以该路径必然踩中。
+// PowerShell 7 对无 BOM 也正常 —— 所以开发机（PS7）永远测不出来，必须由断言守住。
+// 反向约束：.sh 绝不能有 BOM，否则 #! 变成 \xEF\xBB\xBF#!，shebang 失效。
+const hasBom = (buf) => buf.length >= 3 && buf[0] === 0xef && buf[1] === 0xbb && buf[2] === 0xbf;
+const nonAsciiBytes = (buf) => buf.reduce((n, b) => (b > 127 ? n + 1 : n), 0);
+for (const name of ["install.ps1", "uninstall.ps1"]) {
+  const p = join(ROOT, name);
+  if (!existsSync(p)) continue;
+  const buf = readFileSync(p);
+  const nonAscii = nonAsciiBytes(buf);
+  check(nonAscii > 0 ? hasBom(buf) : true, `${name}: 含非 ASCII 时必须有 UTF-8 BOM`,
+    nonAscii > 0 && !hasBom(buf) ? `含 ${nonAscii} 个非 ASCII 字节却无 BOM（PS 5.1 会解析失败）` : "");
+}
+for (const name of ["install.sh", "uninstall.sh"]) {
+  const p = join(ROOT, name);
+  if (!existsSync(p)) continue;
+  const buf = readFileSync(p);
+  check(!hasBom(buf), `${name}: 不得有 BOM（会破坏 #! shebang）`);
+  check(buf[0] === 0x23 && buf[1] === 0x21, `${name}: 以 #! 开头`);
+}
 mustContain(readFileSync(join(ROOT, "README.md"), "utf8"), "dsh-infinite-gen-x", "README: 插件 id");
 
 // ---- 6b. README 安装链接必须指向本插件自己的仓库（D-014）----

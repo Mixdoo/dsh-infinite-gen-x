@@ -817,6 +817,86 @@ D-007~D-010 四轮工程化改动（评分器唯一实现 / Config 化 / 兼容�
 
 ---
 
+## D-015 跨机安装暴露的两个缺陷：PS 5.1 编码 + 兼容门禁探测面 —— 已修复
+
+**日期**：2026-09-28
+**状态**：✅ 已实现
+**Commit**：（本条目随实现同批提交）
+
+### 背景
+在**另一台电脑**（华为机，DSH 按用户安装于 `%LOCALAPPDATA%\Programs\DSH Desktop`）执行安装时，
+执行方报告了两处阻塞/降级问题。本机复现后确认为**本仓库的真实缺陷**（非环境问题）。
+
+### 缺陷一：`install.ps1` 无 BOM → Windows PowerShell 5.1 解析失败（阻塞安装）
+
+**现象**：另一台机器上 `install.ps1` 解析直接失败，脚本一行都没跑。
+**根因**：`install.ps1` / `uninstall.ps1` 是 **UTF-8 无 BOM** 且含大量中文
+（实测 `install.ps1` 有 **3686 个非 ASCII 字节**）。Windows PowerShell 5.1 在无 BOM 时
+按**系统 ANSI 代码页**读取脚本文件 → 中文字面量被破坏 → 语法错误。
+而 `install.bat` 显式调用 `powershell.exe`（即 5.1），所以 .bat 入口必然踩中。
+
+**本机为何一直没发现**：本机默认 `pwsh` 是 **PowerShell 7.6.6**，PS 7 对无 BOM 也按 UTF-8 读，
+所以怎么跑都正常。**这是一个只在目标机器上才显现的缺陷。**
+
+**复现与因果实证**（本机同时有 PS 5.1 与 PS 7）：
+
+| 脚本 | PS 5.1 | PS 7 |
+|---|---|---|
+| `install.ps1`（补 BOM 后） | **OK** ✓ | OK ✓ |
+| `uninstall.ps1`（补 BOM 后） | **OK** ✓ | OK ✓ |
+| 同一文件**剥掉 BOM** 的副本（负例） | **FAIL — 6 处语法错误**，首条正是中文插件名列表被破坏 | OK |
+
+**修复**：给 `install.ps1` / `uninstall.ps1` 补 UTF-8 BOM。
+**刻意不加**：`.sh` 加 BOM 会让 `#!` 变成 `\xEF\xBB\xBF#!`、shebang 失效；
+`.bat` 不加（cmd.exe 会把 BOM 当命令的一部分）。
+
+### 缺陷二：`verify_compat.mjs` 探测不到按用户安装的 DSH（降级为 SKIP）
+
+**现象**：另一台机器上脚本返回 **SKIP**（未找到 DSH 安装），需用 `DSH_APP_ROOT` 手工指定才得出真实判定。
+**根因**：锚点候选只写死了**全局安装**路径（`C:/Program Files/DSH NEXT/...`）与源码 checkout，
+而 DSH 有三种落点：全局、**按用户**（`%LOCALAPPDATA%\Programs\<名字>\resources\app`）、源码。
+**SKIP 的严重性**：SKIP 会被误读为"没问题"，而该脚本的全部价值就是提前发现"插件会被静默跳过"。
+
+**修复**：
+- 新增 `discoverInstalled()`：扫描 `%LOCALAPPDATA%\Programs`、`%ProgramFiles%`、`%ProgramFiles(x86)%`
+  下名字含 `dsh`/`deepseek` 的目录，逐个验证是否含 `node_modules/@deepseek-ai/dsh-app-boot/package.json`。
+- 锚点去重（发现式与硬编码式常命中同一安装，重复探测只会让输出噪音翻倍）。
+- SKIP 时**列出全部已探测候选**，并明确写"SKIP 不等于通过"。
+
+**验证**：本机正常环境 → 认出 1 个锚点（去重生效）；
+构造伪安装树 `%LOCALAPPDATA%\Programs\DSH Desktop\resources\app`（semver 以 junction 指向真实安装）
+并令 `LOCALAPPDATA` 指向它 → **成功发现**该按用户安装（正是另一台机器的路径形态）。
+
+### 新增回归约束（把两处都变成机器可检查）
+`verify_prompt.mjs` 新增 **6 条断言**：
+- `install.ps1` / `uninstall.ps1`：**含非 ASCII 时必须有 UTF-8 BOM**（否则 PS 5.1 会解析失败）
+- `install.sh` / `uninstall.sh`：**不得有 BOM**（会破坏 shebang）+ 必须以 `#!` 开头
+
+**为什么必须靠断言守**：BOM 只是 3 字节前缀，任何编辑器"另存为 UTF-8"或工具重写都可能静默剥掉；
+而失败**只在 PS 5.1 上显现**，开发机（PS 7）永远测不出来。
+
+**负例实测**：
+| 负例 | 结果 |
+|---|---|
+| 剥掉 `install.ps1` 的 BOM | ❌ ×1（报"含 3686 个非 ASCII 字节却无 BOM"）→ 87/1 |
+| 给 `install.sh` 加 BOM | ❌ ×2（有 BOM + 不以 `#!` 开头）→ 86/2 |
+
+恢复后：`verify_prompt` **88/0**（原 82，新增 6 条）；`verify_prompt_genx` 108/0；
+`verify_compat` COMPAT OK；`scorer_semantics` OK；`node --check` 通过。
+
+### 另一台机器报告的其余观察（评估结论）
+- **`~/.dsh/profiles/node_modules/@deepseek-ai/dsh` 是指向开发 checkout 的符号链接**
+  （该机 checkout 版本 `0.2.1-alpha.2`），而桌面端自带 `0.2.0-rc.2` —— 两个运行时并存。
+  **评估：环境现状，非 gen-x 缺陷**；两者都落在 `^0.2.0-rc.2`（`<0.3.0`）内，故结论不受影响。
+  DSH 的兼容性门禁读的是**运行中 app 的 app-boot 版本**，与符号链接无关。
+- **`--dump-config` 打印 `patch: entry "desktop-shell" not found`** —— 该 profile 既有的历史遗留项，
+  与本次安装无关。**评估：非 gen-x 问题，不建议在 gen-x 侧处理。**
+- **该机安装形态是"复制快照"而非 link**（`install.ps1` 把插件复制到 `~/.dsh/plugins/` 后按相对
+  `file:` 路径引用）。**运维含义：两台机器会各自漂移** —— 本机是 `link:` 直读仓库（改源码即生效），
+  另一台是快照（需重跑 `install.ps1` 或手工同步才更新）。此差异记入本档案供后续留意。
+
+---
+
 ## 候选方向（待评估）
 - ~~**(c) 按目标模型分内核**~~ → **D-005 证伪**，gen-x 低调内核跨模型通用，无需求。
 - **(d) armor LLM 辅助判定**：规则 + LLM 混合判定 refusal，突破词表天花板（D-004 的延伸）。
