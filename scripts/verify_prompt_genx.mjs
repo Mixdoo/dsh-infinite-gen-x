@@ -146,6 +146,16 @@ check(pkg.version === "0.6.0", "package.json version = 0.6.0");
 check(pkg.dsh?.id === "dsh-infinite-gen-x", "dsh.id = dsh-infinite-gen-x");
 check(pkg.dsh?.version === "0.6.0", "dsh.version = 0.6.0");
 check(pkg.exports?.["./client"] === "./client.js", "client 导出映射完整");
+// 客户端清单约束（D-010）：business 行不进 stage-one prefetch 层，且不声明不存在的依赖边。
+//   · immediately: DSH 规定只给基础设施行用；且 boot.ts 的 prefetchImmediateTier 会 await 它，
+//     business 行声明等于让 stage-one 启动多等一次取包。gen-x 用 slots.inject 保证顺序，无需它。
+//   · inject: DSH 里是包名依赖边（同时驱动 factory 到达顺序）。client.js 只用 baseline 的 react，
+//     声明任何 @deepseek-ai/* 边都是凭空创造关系。
+//   · external: baseline 之外才需要；DSH 明文禁止在 manifest 重复 baseline 模块。
+check(pkg.dsh?.client?.platform === "web", "dsh.client.platform = web");
+check(pkg.dsh?.client?.immediately === undefined, "business 行不声明 immediately（不进 stage-one prefetch 层）");
+check(pkg.dsh?.client?.inject === undefined, "不声明 dsh.client.inject（无跨包 factory 依赖边）");
+check(pkg.dsh?.client?.external === undefined, "不声明 dsh.client.external（仅用 baseline 模块）");
 
 // ---- 6. 客户端状态条版本 ----
 const clientSrc = existsSync(join(ROOT, "client.js")) ? readFileSync(join(ROOT, "client.js"), "utf8") : "";

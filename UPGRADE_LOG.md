@@ -531,6 +531,70 @@ Tier-1 #3「兼容性元数据」。原计划照抄 dsh-purge 的 `dshTarget` + 
 
 ---
 
+## D-010 客户端清单纠偏（移除 `immediately`）—— 已实现；`dsh.client.inject` 经核查无需声明
+
+**日期**：2026-09-28
+**状态**：✅ 已实现
+**Commit**：（本条目随实现同批提交）
+
+### 起因
+Tier-1 #4「`dsh.client.inject`」——原计划照 purge 声明 5 个客户端包
+（`dsh-client-connection` / `-runtime` / `-locale` / `-ui-slots` / `-ui-settings`）。
+
+### 核查一：`dsh.client.inject` **无需声明**（决定不加）
+- DSH 客户端规范（`packages/client/AGENTS.md`）：*"`inject` lists package-name dependency edges —
+  they are **informational only** (preflight display, HMR diffing); they do not sequence entry
+  activation or apply order."*
+- 但 `client/modules/src/client/manifest.ts:62-63` 补充：它是
+  *"Package-name dependency edges used for **factory arrival** and plugin composition"* ——
+  即这些边是**真实的到达顺序约束**，不是纯注释。乱声明 = 凭空创造关系。
+- 实测 gen-x 的 `client.js`：全部 `require()` **只有一个** —— `require("react")`，
+  无任何 `@deepseek-ai/*` 模块请求。而 DSH 明文规定
+  *"Baseline externals are implicit for every dynamic bundle. Do not repeat React, Cordis,
+  `client/store`、`ui-primitives`、`ui-slots`、`ui-dockkit` in package manifests."*
+- gen-x 的 Cordis 服务依赖是模块内自声明的 `exports.inject = ["slots"]`（**服务** inject），
+  与 `dsh.client.inject`（**包名**边）是两套不同机制。
+- **结论：不加。** 加了会在 preflight 与 HMR 元数据里声明不存在的依赖边。
+
+### 核查二：发现真正的一处误声明 —— `immediately: true`（决定修）
+- DSH 规范：*"**`immediately: true` only for stage-one-prefetch infrastructure rows**"*。
+- `client/web/src/boot.ts:115-122` 揭示真实代价：
+  ```js
+  /** Prefetch stage-one bundles and their dynamic requests before concurrent plugin imports. */
+  private async prefetchImmediateTier() {
+    await Promise.all(this.manifest.plugins
+      .filter(row => row.immediately)
+      .map(row => this.modules.prefetch(row.id).catch(...)))
+  }
+  ```
+  → 声明 `immediately` 会让 **stage-one 启动 `await` 这次取包**。对"输入框状态条"这种
+  business 功能，等于让整个启动为一个徽标多等一次网络往返。
+- 且 gen-x 已经用了**顺序无关的正确模式**
+  `ctx.slots.inject("conversation.input.dock", () => ctx.slots.register(...))`
+  （DSH 规范推荐用法：*"it waits on the actual declaration"*），**根本不需要靠 prefetch 抢顺序**。
+- **结论：移除 `immediately`**，`dsh.client` 由 `{platform, immediately}` 收敛为 `{platform: "web"}`。
+
+### 实现与验证
+- `package.json`：`dsh.client` → `{"platform": "web"}`。
+- `verify_prompt_genx.mjs` 新增 4 条**机器可检查约束**（沿用 D-007/D-008 做法）：
+  `platform === "web"` / `immediately === undefined` / `inject === undefined` / `external === undefined`。
+- **负例实测**（证明非空断言）：把 `immediately: true` + `inject: [...]` 塞回去 →
+  2 条断言失败（94/2）；恢复 → **96/0**。
+- 回归：`verify_prompt_genx` 96/0、`verify_prompt_genx1` 96/0、`verify_prompt` 62/0、
+  `verify_compat` OK、`scorer_semantics` OK。
+
+### 待人工确认（如实申报）
+移除 `immediately` 后，客户端 bundle 从 stage-one prefetch 层回到正常 application 阶段。
+按 DSH 的机制这**只影响取包时机、不影响注册正确性**（顺序由 `slots.inject` 保证），
+但**本环境无法目视验证**（本会话是 desktop profile 未加载 gen-x，且无浏览器控制）。
+请在 `web` profile 刷新页面后确认：输入框上方「无限X代 v0.6.0」状态条仍正常出现与着色。
+
+### 后续（Tier-1 剩余项）
+- 发布工程（`.github/workflows/release.yml` / `dsh.install` / `bin`）：取决于是否要发 npm。
+- 文档工程：双语 README、`docs/` 截图、`release-notes.md`。
+
+---
+
 ## 评测资产（常设）
 | 资产 | 用途 |
 |---|---|
