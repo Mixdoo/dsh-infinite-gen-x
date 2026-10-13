@@ -61,15 +61,23 @@ function Find-ProfileDirs {
         Write-Warn "环境变量 DSH_PROFILE 指向的目录不存在：$candidate（继续自动探测）"
     }
 
-    # 2) 按优先级探测常见目录名：取【第一个命中】的，不收集全部。
-    #    历史行为是收集所有命中项并全部返回，那会在 web 与 desktop 并存的机器上
-    #    **静默同时写入两个 profile**（并对每个都跑 pnpm install）——对 web 这类
-    #    带大 patch 文件的 profile 有破坏既有配置的风险。要装多个请逐个显式指定。
+    # 2) 按优先级探测常见目录名，但**只在唯一命中时自动采用**。
+    #    历史上此处收集全部候选并逐个返回，会对每个命中的 profile 都写依赖并各跑一次
+    #    pnpm install —— 在 web 与 desktop 并存的机器上会静默污染另一个 profile
+    #    （web 常带大 patch 文件，在其上重算依赖有破坏既有配置的风险）。
+    #    改成"只取第一个"仍不够：优先级次序 web > default > desktop 本身是任意约定，
+    #    会静默选错对象。故多个并存时不猜，落到下面的显式选择；
+    #    非交互环境会在那里明确报错退出，而不是替用户决定。
+    $priority = @()
     foreach ($name in @('web', 'default', 'desktop')) {
         $candidate = Join-Path $ProfilesRoot $name
-        if (Test-Path (Join-Path $candidate 'package.json')) {
-            return @($candidate)
-        }
+        if (Test-Path (Join-Path $candidate 'package.json')) { $priority += $candidate }
+    }
+    if ($priority.Count -eq 1) { return @($priority[0]) }
+    if ($priority.Count -gt 1) {
+        $names = ($priority | ForEach-Object { Split-Path $_ -Leaf }) -join ', '
+        Write-Warn "检测到多个常见 profile（$names），不自动选择。"
+        Write-Host '  请显式指定目标后再运行：$env:DSH_PROFILE = "desktop"' -ForegroundColor Yellow
     }
 
     # 3) 列出所有候选目录让用户选择
